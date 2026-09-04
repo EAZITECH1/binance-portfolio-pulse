@@ -78,7 +78,7 @@ PortfolioPulse runs with standard Python 3.9+ with **zero mandatory external dep
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/binance-portfolio-pulse.git
+git clone https://github.com/EAZITECH1/binance-portfolio-pulse.git
 cd binance-portfolio-pulse
 
 # 2. Run the agent in zero-key demonstration mode

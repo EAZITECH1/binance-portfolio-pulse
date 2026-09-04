@@ -12,7 +12,7 @@
 > 
 > PortfolioPulse is an autonomous AI agent powered by Binance Agent OS MCP that bridges crypto exchange infrastructure with intelligent data analytics. It tracks live portfolio holdings and 7-day market momentum, detects hidden risk vulnerabilities (like asset concentration and volatility spikes), and translates complex market movements into plain-language daily intelligence reports in Markdown, JSON, and interactive dark-mode HTML. Built for both non-traders and quants—secure, cron-ready, and zero-key testable! 🤖📊🟡
 > 
-> 🔗 GitHub: [https://github.com/your-username/binance-portfolio-pulse](https://github.com/your-username/binance-portfolio-pulse)  
+> 🔗 GitHub: [https://github.com/EAZITECH1/binance-portfolio-pulse](https://github.com/EAZITECH1/binance-portfolio-pulse)  
 > #Binance #AgentOS #BuildOnBinance #AIagents #MCP #CryptoAnalytics
 
 *(Character count: ~560 chars / 3-5 punchy sentences, perfectly suited for a multi-media hackathon post on X with video attachment)*
