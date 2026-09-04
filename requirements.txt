@@ -1,0 +1,6 @@
+# Binance PortfolioPulse AI Dependencies
+# Designed to run with Python 3.9+ standard library out-of-the-box,
+# with enhanced support for dotenv and requests if installed.
+
+python-dotenv>=1.0.0
+requests>=2.31.0

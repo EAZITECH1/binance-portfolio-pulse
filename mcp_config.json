@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-config.json",
+  "mcpServers": {
+    "binance-agent-os": {
+      "command": "python3",
+      "args": ["-m", "src.connectors.mcp_client", "--stdio"],
+      "description": "Binance Agent OS MCP Server interface for portfolio, market data, and risk analytics",
+      "env": {
+        "BINANCE_MCP_ENDPOINT": "https://agent.binance.com/mcp/agentic",
+        "AGENT_MODE": "mock"
+      }
+    },
+    "binance-official-hosted": {
+      "url": "https://agent.binance.com/mcp/agentic",
+      "description": "Direct official Binance Agent OS hosted streamable HTTP endpoint"
+    }
+  }
+}
