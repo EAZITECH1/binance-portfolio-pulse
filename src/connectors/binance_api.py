@@ -48,9 +48,10 @@ class BinanceAPIClient:
         base_url: Optional[str] = None,
         timeout: int = 10,
     ):
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.base_url = (base_url or "https://data-api.binance.vision").rstrip("/")
+        from ..config import config
+        self.api_key = api_key if api_key is not None else config.api_key
+        self.api_secret = api_secret if api_secret is not None else config.api_secret
+        self.base_url = (base_url or config.base_url or "https://api.binance.com").rstrip("/")
         self.timeout = timeout
         self.ssl_context = get_ssl_context()
 

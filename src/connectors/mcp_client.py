@@ -23,13 +23,14 @@ class BinanceMCPClient:
 
     def __init__(
         self,
-        endpoint_url: str = "https://agent.binance.com/mcp/agentic",
+        endpoint_url: Optional[str] = None,
         auth_token: Optional[str] = None,
         fallback_to_api: bool = True,
         api_client: Optional[BinanceAPIClient] = None,
     ):
-        self.endpoint_url = endpoint_url
-        self.auth_token = auth_token
+        from ..config import config
+        self.endpoint_url = endpoint_url or config.mcp_endpoint
+        self.auth_token = auth_token or config.mcp_auth_token
         self.fallback_to_api = fallback_to_api
         self.api_client = api_client or BinanceAPIClient()
         self.mock_provider = MockDataProvider()
@@ -201,7 +202,7 @@ class BinanceMCPClient:
         self,
         prompt: str,
         watchlist: Optional[List[str]] = None,
-        mode: str = "mock",
+        mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Orchestrator method that ingests balances, market tickers, risk assessment,
@@ -214,19 +215,43 @@ class BinanceMCPClient:
         from ..analytics.market_brief import MarketBriefGenerator
         from ..config import config
 
+        # Decide whether to use real exchange API or mock
+        use_live = (mode == "api") or (mode != "mock" and bool(self.api_client.api_key))
+
         # Ingest balances & tickers
-        raw = self.mock_provider.get_account_balances() if mode == "mock" else self.call_tool("get_account_balances", {})
-        tickers = {}
-        trends = {}
-        for item in raw:
-            asset = item.get("asset", "").upper()
-            if asset in ("USDT", "USDC", "FDUSD"):
-                continue
-            sym = f"{asset}USDT"
-            t = self.mock_provider.get_ticker_24hr(sym)
-            tickers[sym] = t
-            k = self.mock_provider.get_klines_history(sym, limit=7)
-            trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
+        if use_live:
+            try:
+                raw = self.api_client.get_account_balances()
+            except Exception as e:
+                logger.warning(f"Error fetching live balances: {e}")
+                raw = []
+            tickers = {}
+            trends = {}
+            for item in raw:
+                asset = item.get("asset", "").upper()
+                if asset in ("USDT", "USDC", "FDUSD"):
+                    continue
+                sym = f"{asset}USDT"
+                try:
+                    t = self.api_client.get_ticker_24hr(sym)
+                    tickers[sym] = t
+                    k = self.api_client.get_klines(sym, interval="1d", limit=7)
+                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
+                except Exception:
+                    tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+        else:
+            raw = self.mock_provider.get_account_balances()
+            tickers = {}
+            trends = {}
+            for item in raw:
+                asset = item.get("asset", "").upper()
+                if asset in ("USDT", "USDC", "FDUSD"):
+                    continue
+                sym = f"{asset}USDT"
+                t = self.mock_provider.get_ticker_24hr(sym)
+                tickers[sym] = t
+                k = self.mock_provider.get_klines_history(sym, limit=7)
+                trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
 
         summary = PortfolioAnalyzer.analyze(raw, tickers)
         risk = RiskAnalyzer.evaluate(
@@ -244,7 +269,7 @@ class BinanceMCPClient:
             gemini_api_key=config.gemini_api_key,
             openai_api_key=config.openai_api_key,
         )
-        brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode)
+        brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode or ("api" if use_live else "mock"))
 
         # Build comprehensive answer
         answer = (
@@ -277,13 +302,17 @@ class BinanceMCPClient:
 
         # Fallback to direct API or mock data if MCP endpoint is restricted by policy
         logger.debug(f"Handling '{name}' via local agent tool provider.")
+        from ..config import config
         if name == "get_account_balances":
             if self.fallback_to_api and self.api_client.api_key:
                 try:
                     return self.api_client.get_account_balances()
-                except Exception:
-                    pass
-            return self.mock_provider.get_account_balances()
+                except Exception as e:
+                    logger.warning(f"Error fetching account balances: {e}")
+                    return []
+            if config.mode == "mock" and not self.api_client.api_key:
+                return self.mock_provider.get_account_balances()
+            return []
 
         elif name == "get_ticker_24hr":
             sym = arguments.get("symbol", "BTCUSDT")

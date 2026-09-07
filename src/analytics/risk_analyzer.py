@@ -58,6 +58,15 @@ class RiskAnalyzer:
         flags: List[RiskFlag] = []
         score_penalties = 0
 
+        # 0. Zero Holdings Check
+        if summary.total_value_usd <= 0 or summary.asset_count == 0:
+            return RiskAssessment(
+                overall_score=0,
+                risk_level="LOW",
+                flags=[],
+                key_vulnerabilities=["No active token balances in account."],
+            )
+
         # 1. Concentration Risk Checks
         for pos in summary.positions:
             if not pos.is_stablecoin:

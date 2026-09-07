@@ -121,6 +121,19 @@ class AISummaryGenerator:
             if llm_summary:
                 return llm_summary
 
+        # Zero holdings check
+        if summary.total_value_usd <= 0 or summary.asset_count == 0:
+            return PlainLanguageSummary(
+                headline="Your Binance Spot account currently has no active token holdings ($0.00).",
+                overview="As of today, your total account is valued at $0.00 USD across 0 active positions.",
+                market_drivers="• No active portfolio asset movements detected today.",
+                risk_perspective="Your account has zero exposure to market volatility with $0.00 deployed in active positions.",
+                actionable_tips=[
+                    "Deposit or transfer assets into your Binance Spot wallet to begin tracking portfolio analytics.",
+                    "Query get_market_overview() to discover live market momentum across major assets.",
+                ],
+            )
+
         # Top performer and worst performer over 24h
 
         crypto_positions = [p for p in summary.positions if not p.is_stablecoin]
