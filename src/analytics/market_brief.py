@@ -87,11 +87,24 @@ class MarketBriefGenerator:
     def generate(
         cls,
         watchlist: Optional[List[str]] = None,
-        mode: str = "mock",
+        mode: Optional[str] = None,
     ) -> MarketBrief:
-        mock = MockDataProvider()
-        overview = mock.get_market_overview(watchlist)
-        price_feed_provider = PriceFeedDataProvider(mode=mode)
+        from ..connectors.binance_api import BinanceAPIClient
+        from ..utils.logger import logger
+
+        overview = None
+        if mode != "mock":
+            try:
+                api = BinanceAPIClient()
+                overview = api.get_market_overview(watchlist)
+            except Exception as e:
+                logger.warning(f"Live market overview query failed: {e}. Using benchmark overview.")
+
+        if not overview or not overview.get("assets"):
+            mock = MockDataProvider()
+            overview = mock.get_market_overview(watchlist)
+
+        price_feed_provider = PriceFeedDataProvider(mode="live" if mode != "mock" else "mock")
         price_feeds = price_feed_provider.get_price_feed_snapshot()
 
         assets = {a["asset"]: a for a in overview.get("assets", [])}

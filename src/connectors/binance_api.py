@@ -174,3 +174,72 @@ class BinanceAPIClient:
                     "locked": str(locked),
                 })
         return active_balances
+
+    def get_market_overview(self, watchlist: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Fetch real-time market overview across a watchlist of assets using live Binance 24h tickers.
+        Ranks top gainers, top losers, total quote volume, and computes live market sentiment.
+        """
+        if not watchlist:
+            watchlist = ["BTC", "ETH", "SOL", "BNB", "SUI", "NEAR", "AVAX", "DOGE", "LINK", "ARB", "PEPE"]
+
+        symbols = [f"{asset.upper()}USDT" for asset in watchlist]
+        raw_tickers = []
+        try:
+            symbols_param = json.dumps(symbols, separators=(",", ":"))
+            data = self._request("GET", "/api/v3/ticker/24hr", {"symbols": symbols_param})
+            if isinstance(data, list):
+                raw_tickers = data
+        except Exception:
+            for sym in symbols:
+                try:
+                    t = self.get_ticker_24hr(sym)
+                    raw_tickers.append(t)
+                except Exception:
+                    pass
+
+        items = []
+        total_vol_usd = 0.0
+        for t in raw_tickers:
+            sym = t.get("symbol", "")
+            asset = sym.replace("USDT", "")
+            price = float(t.get("lastPrice", 0.0))
+            change_pct = float(t.get("priceChangePercent", 0.0))
+            quote_vol = float(t.get("quoteVolume", 0.0))
+            total_vol_usd += quote_vol
+
+            items.append({
+                "asset": asset,
+                "symbol": sym,
+                "price": price,
+                "priceChangePercent": change_pct,
+                "high24h": float(t.get("highPrice", price)),
+                "low24h": float(t.get("lowPrice", price)),
+                "volume24hUsd": quote_vol,
+            })
+
+        sorted_by_change = sorted(items, key=lambda x: x["priceChangePercent"], reverse=True)
+        top_gainers = sorted_by_change[:3] if sorted_by_change else []
+        top_losers = sorted_by_change[-2:] if len(sorted_by_change) >= 2 else []
+
+        avg_change = sum(x["priceChangePercent"] for x in items) / len(items) if items else 0.0
+        if avg_change > 3.0:
+            sentiment = "BULLISH_EXPANSION"
+        elif avg_change > 0.5:
+            sentiment = "MODERATE_RISK_ON"
+        elif avg_change < -3.0:
+            sentiment = "BEARISH_RETREAT"
+        elif avg_change < -0.5:
+            sentiment = "MILD_PULLBACK"
+        else:
+            sentiment = "NEUTRAL_CONSOLIDATION"
+
+        return {
+            "timestamp": int(time.time()),
+            "sentiment": sentiment,
+            "average_24h_change_pct": round(avg_change, 2),
+            "total_tracked_volume_usd": round(total_vol_usd, 2),
+            "top_gainers": top_gainers,
+            "top_losers": top_losers,
+            "assets": items,
+        }

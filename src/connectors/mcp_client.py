@@ -335,16 +335,28 @@ class BinanceMCPClient:
 
         elif name == "get_market_overview":
             watchlist = arguments.get("watchlist")
-            return self.mock_provider.get_market_overview(watchlist)
+            if self.fallback_to_api:
+                try:
+                    return self.api_client.get_market_overview(watchlist)
+                except Exception as e:
+                    logger.warning(f"Live market overview query failed: {e}")
+            from ..config import config
+            if config.mode == "mock":
+                return self.mock_provider.get_market_overview(watchlist)
+            return self.api_client.get_market_overview(watchlist)
 
         elif name in ("get_price_feed_snapshot", "get_onchain_snapshot"):
             from .price_feed_data import PriceFeedDataProvider
-            return PriceFeedDataProvider().get_price_feed_snapshot()
+            from ..config import config
+            mode = "mock" if config.mode == "mock" else "live"
+            return PriceFeedDataProvider(mode=mode).get_price_feed_snapshot()
 
         elif name == "generate_market_brief":
             from ..analytics.market_brief import MarketBriefGenerator
+            from ..config import config
             watchlist = arguments.get("watchlist")
-            brief = MarketBriefGenerator.generate(watchlist=watchlist)
+            mode = "mock" if config.mode == "mock" else "api"
+            brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode)
             return brief.to_dict()
 
         elif name == "draft_tweet":
@@ -356,8 +368,22 @@ class BinanceMCPClient:
 
             if topic == "portfolio":
                 from ..analytics.portfolio import PortfolioAnalyzer
-                raw = self.mock_provider.get_account_balances()
-                tickers = {f"{item['asset']}USDT": self.mock_provider.get_ticker_24hr(f"{item['asset']}USDT") for item in raw}
+                raw = []
+                if self.fallback_to_api and self.api_client.api_key:
+                    try:
+                        raw = self.api_client.get_account_balances()
+                    except Exception:
+                        pass
+                if not raw and config.mode == "mock" and not self.api_client.api_key:
+                    raw = self.mock_provider.get_account_balances()
+
+                tickers = {}
+                for item in raw:
+                    sym = f"{item['asset']}USDT"
+                    try:
+                        tickers[sym] = self.api_client.get_ticker_24hr(sym)
+                    except Exception:
+                        tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
                 summary = PortfolioAnalyzer.analyze(raw, tickers)
                 draft = TweetDrafter.draft_portfolio_tweet(
                     summary,
@@ -365,7 +391,8 @@ class BinanceMCPClient:
                     anthropic_api_key=config.anthropic_api_key,
                 )
             else:
-                brief = MarketBriefGenerator.generate()
+                mode = "mock" if config.mode == "mock" else "api"
+                brief = MarketBriefGenerator.generate(mode=mode)
                 draft = TweetDrafter.draft_market_tweet(
                     brief,
                     style=style,
