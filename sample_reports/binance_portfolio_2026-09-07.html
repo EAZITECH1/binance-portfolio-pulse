@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance PortfolioPulse - Daily Analysis</title>
+    <style>
+        :root {
+            --bg-base: #0b0e11;
+            --bg-surface: #181a20;
+            --bg-elevated: #2b313a;
+            --text-primary: #eaecef;
+            --text-secondary: #848e9c;
+            --text-muted: #5e6673;
+            --gold: #f0b90b;
+            --green: #0ecb81;
+            --red: #f6465d;
+            --border-color: #2b313a;
+            --border-radius: 12px;
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-stack);
+            line-height: 1.5;
+            padding: 32px 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #f0b90b, #f8d33a);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #000;
+            font-size: 20px;
+        }
+        h1 { font-size: 24px; font-weight: 700; color: #fff; }
+        .meta-tag { font-size: 13px; color: var(--text-secondary); }
+        
+        /* Metric Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .metric-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            position: relative;
+        }
+        .metric-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .metric-sub {
+            font-size: 14px;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+
+        /* AI Executive Banner */
+        .ai-banner {
+            background: linear-gradient(135deg, rgba(240, 185, 11, 0.08), rgba(24, 26, 32, 0.95));
+            border: 1px solid rgba(240, 185, 11, 0.3);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .ai-banner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(240, 185, 11, 0.2);
+            color: var(--gold);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .ai-banner h2 { font-size: 18px; margin-bottom: 10px; color: #fff; }
+        .ai-banner p { color: var(--text-primary); font-size: 15px; line-height: 1.6; margin-bottom: 12px; }
+        .ai-banner-drivers {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            white-space: pre-line;
+            line-height: 1.7;
+        }
+
+        /* Section Containers */
+        .section-box {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .section-box h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        /* Allocation Bar */
+        .alloc-bar-wrapper {
+            height: 14px;
+            display: flex;
+            border-radius: 7px;
+            overflow: hidden;
+            background-color: var(--bg-elevated);
+            margin-bottom: 16px;
+        }
+        .legend-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .legend-asset { font-weight: 600; color: #fff; }
+        .legend-pct { color: var(--text-secondary); }
+
+        /* Data Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        tr:last-child td { border-bottom: none; }
+        .asset-name { font-size: 15px; color: #fff; }
+
+        /* Risk Cards */
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .risk-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px;
+        }
+        .risk-card.critical, .risk-card.high {
+            border-left: 4px solid var(--red);
+        }
+        .risk-card.medium {
+            border-left: 4px solid var(--gold);
+        }
+        .risk-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .risk-cat { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+        .risk-title { font-size: 15px; color: #fff; margin-bottom: 8px; }
+        .risk-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5; }
+        .risk-action {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        /* Action Steps */
+        .action-list {
+            list-style-type: decimal;
+            padding-left: 20px;
+            color: var(--text-primary);
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        /* Utility Classes */
+        .green { color: var(--green); }
+        .red { color: var(--red); }
+        .muted { color: var(--text-muted); }
+        .pill {
+            background-color: var(--bg-elevated);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge.green { background: rgba(14, 203, 129, 0.15); color: var(--green); }
+        .badge.red { background: rgba(246, 70, 93, 0.15); color: var(--red); }
+        .badge.amber { background: rgba(240, 185, 11, 0.15); color: var(--gold); }
+
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-area">
+                <div class="logo-icon">B</div>
+                <div>
+                    <h1>Binance PortfolioPulse AI</h1>
+                    <div class="meta-tag">Binance Agent OS • Daily Portfolio & Risk Intelligence</div>
+                </div>
+            </div>
+            <div class="meta-tag">
+                Generated: <strong>2026-09-07 02:19:14 UTC</strong><br>
+                Source: <strong>Binance Sandbox Demo (High-Fidelity Mock)</strong>
+            </div>
+        </header>
+
+        <!-- Top Metrics Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Portfolio Value</div>
+                <div class="metric-value">$71,980.53</div>
+                <div class="metric-sub green">
+                    24h: +$1,464.58 (+2.08%)
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Unrealized P&L</div>
+                <div class="metric-value">+$3,182.53</div>
+                <div class="metric-sub muted">Calculated from cost basis</div>
+            </div>
+            <div class="metric-card" style="border-color: #f6465d;">
+                <div class="metric-label">Overall Risk Status</div>
+                <div class="metric-value" style="color: #f6465d;">HIGH</div>
+                <div class="metric-sub" style="color: #f6465d;">Score: 10/10</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Cash / Stable Reserve</div>
+                <div class="metric-value">$3,850.00</div>
+                <div class="metric-sub muted">5.3% of total portfolio</div>
+            </div>
+        </div>
+
+        <!-- Plain-Language AI Synthesis -->
+        <div class="ai-banner">
+            <div class="ai-banner-badge">✨ AI Financial Intelligence</div>
+            <h2>Your portfolio climbed 2.1% (+$1,464.58) today, powered by a surge in SOL (+9.4%).</h2>
+            <p>As of today, your total account is valued at $71,980.53. Over the past 24 hours, your net change was +$1,464.58 (+2.1%). Your largest holding is BTC, which makes up 55.1% of your total balance ($39,656.25). You have $3,850.00 (5.3%) in liquid cash/stablecoins.</p>
+            <div class="ai-banner-drivers">
+                <strong>Market Drivers:</strong><br>• SOL had a strong day, gaining +9.4% and contributing +$638.45 in value.
+• NEAR saw selling pressure, decreasing by -7.8% (-$227.02).
+• Bitcoin (BTC) moved +3.1% to $63,450.00, providing a stabilizing anchor for your overall account.
+            </div>
+        </div>
+
+        <!-- Asset Allocation Bar -->
+        <div class="section-box">
+            <h3>Asset Allocation Breakdown</h3>
+            <div class="alloc-bar-wrapper">
+                <div style="width: 55.09302307165562%; background-color: #F0B90B;" title="BTC: 55.1%"></div><div style="width: 15.68201845693551%; background-color: #3861FB;" title="ETH: 15.7%"></div><div style="width: 10.302786045059687%; background-color: #00D1B2;" title="SOL: 10.3%"></div><div style="width: 9.871113758123204%; background-color: #9B51E0;" title="BNB: 9.9%"></div><div style="width: 5.348668591353801%; background-color: #FF9900;" title="USDT: 5.3%"></div><div style="width: 3.702390076872176%; background-color: #25A750;" title="NEAR: 3.7%"></div>
+            </div>
+            <div class="legend-grid">
+                <div class="legend-item"><span class="legend-dot" style="background-color: #F0B90B;"></span><span class="legend-asset">BTC</span><span class="legend-pct">55.1%</span></div><div class="legend-item"><span class="legend-dot" style="background-color: #3861FB;"></span><span class="legend-asset">ETH</span><span class="legend-pct">15.7%</span></div><div class="legend-item"><span class="legend-dot" style="background-color: #00D1B2;"></span><span class="legend-asset">SOL</span><span class="legend-pct">10.3%</span></div><div class="legend-item"><span class="legend-dot" style="background-color: #9B51E0;"></span><span class="legend-asset">BNB</span><span class="legend-pct">9.9%</span></div><div class="legend-item"><span class="legend-dot" style="background-color: #FF9900;"></span><span class="legend-asset">USDT</span><span class="legend-pct">5.3%</span></div><div class="legend-item"><span class="legend-dot" style="background-color: #25A750;"></span><span class="legend-asset">NEAR</span><span class="legend-pct">3.7%</span></div>
+            </div>
+        </div>
+
+        <!-- Holdings Table -->
+        <div class="section-box">
+            <h3>Holdings & Performance</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Total Balance</th>
+                            <th>Current Price</th>
+                            <th>USD Value</th>
+                            <th>Allocation</th>
+                            <th>24h Change</th>
+                            <th>Unrealized P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong class="asset-name">BTC</strong></td><td>0.6250</td><td>$63,450.00</td><td><strong>$39,656.25</strong></td><td><span class="pill">55.1%</span></td><td><span class="green">+3.15%</span></td><td><span class="green">$+2,656.25 (+7.2%)</span></td></tr><tr><td><strong class="asset-name">ETH</strong></td><td>4.1500</td><td>$2,720.00</td><td><strong>$11,288.00</strong></td><td><span class="pill">15.7%</span></td><td><span class="red">-2.45%</span></td><td><span class="red">$-539.50 (-4.6%)</span></td></tr><tr><td><strong class="asset-name">SOL</strong></td><td>45.0000</td><td>$164.80</td><td><strong>$7,416.00</strong></td><td><span class="pill">10.3%</span></td><td><span class="green">+9.42%</span></td><td><span class="green">$+1,003.50 (+15.6%)</span></td></tr><tr><td><strong class="asset-name">BNB</strong></td><td>12.2000</td><td>$582.40</td><td><strong>$7,105.28</strong></td><td><span class="pill">9.9%</span></td><td><span class="green">+1.80%</span></td><td><span class="green">$+517.28 (+7.9%)</span></td></tr><tr><td><strong class="asset-name">USDT</strong></td><td>3,850.0000</td><td>$1.00</td><td><strong>$3,850.00</strong></td><td><span class="pill">5.3%</span></td><td><span class="green">0.00%</span></td><td><span class="green">$+0.00 (+0.0%)</span></td></tr><tr><td><strong class="asset-name">NEAR</strong></td><td>650.0000</td><td>$4.10</td><td><strong>$2,665.00</strong></td><td><span class="pill">3.7%</span></td><td><span class="red">-7.85%</span></td><td><span class="red">$-455.00 (-14.6%)</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Market Highlights Table -->
+        <div class="section-box">
+            <h3>Market Highlights & Volatility</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Price</th>
+                            <th>24h High / Low</th>
+                            <th>7d Volatility</th>
+                            <th>Trend Sentiment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>BTC</strong></td><td>$63,450.00</td><td>$64,100.00 / $61,200.00</td><td>0.0%</td><td><span class="badge green">↗️ Gain</span></td></tr><tr><td><strong>ETH</strong></td><td>$2,720.00</td><td>$2,810.00 / $2,680.00</td><td>0.0%</td><td><span class="badge red">↘️ Pullback</span></td></tr><tr><td><strong>SOL</strong></td><td>$164.80</td><td>$168.50 / $148.20</td><td>0.0%</td><td><span class="badge green">🚀 Surge</span></td></tr><tr><td><strong>BNB</strong></td><td>$582.40</td><td>$590.00 / $570.00</td><td>0.0%</td><td><span class="badge green">↗️ Gain</span></td></tr><tr><td><strong>NEAR</strong></td><td>$4.10</td><td>$4.55 / $4.02</td><td>0.0%</td><td><span class="badge red">📉 Drop</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Risk Flags -->
+        <div class="section-box">
+            <h3>⚠️ Risk Flags & Vulnerabilities</h3>
+            <div class="risk-grid">
+                <div class="risk-card critical"><div class="risk-card-header"><span class="badge red">CRITICAL</span><span class="risk-cat">CONCENTRATION</span></div><h4 class="risk-title">Severe Concentration in BTC (55.1%)</h4><p class="risk-desc">BTC constitutes over half (55.1%) of total portfolio value. A sharp downturn in BTC will disproportionately damage your overall balance.</p><div class="risk-action"><strong>Action:</strong> Consider rebalancing or taking partial profits in BTC into stablecoins or major assets.</div></div><div class="risk-card medium"><div class="risk-card-header"><span class="badge amber">MEDIUM</span><span class="risk-cat">VOLATILITY</span></div><h4 class="risk-title">Elevated Price Movement on SOL (+9.4%)</h4><p class="risk-desc">SOL moved more than 8% in 24 hours.</p><div class="risk-action"><strong>Action:</strong> Monitor support/resistance levels closely over the next trading session.</div></div><div class="risk-card high"><div class="risk-card-header"><span class="badge red">HIGH</span><span class="risk-cat">DRAWDOWN</span></div><h4 class="risk-title">Sharp Daily Drawdown on NEAR (-7.8%)</h4><p class="risk-desc">NEAR dropped -7.8% today, dragging down your portfolio value by $227.02.</p><div class="risk-action"><strong>Action:</strong> Inspect broader market sentiment and protocol news regarding NEAR.</div></div><div class="risk-card medium"><div class="risk-card-header"><span class="badge amber">MEDIUM</span><span class="risk-cat">LIQUIDITY</span></div><h4 class="risk-title">Below Recommended Cash Buffer (5.3%)</h4><p class="risk-desc">Stablecoins represent 5.3% of holdings, below the recommended 10% safety cushion.</p><div class="risk-action"><strong>Action:</strong> Consider building your reserve to provide flexibility during drawdowns.</div></div>
+            </div>
+        </div>
+
+        <!-- Actionable Steps -->
+        <div class="section-box">
+            <h3>🎯 Practical Next Steps for Non-Traders</h3>
+            <ol class="action-list">
+                <li>Consider rebalancing or taking partial profits in BTC into stablecoins or major assets.</li><li>Monitor support/resistance levels closely over the next trading session.</li><li>Inspect broader market sentiment and protocol news regarding NEAR.</li>
+            </ol>
+        </div>
+
+        <footer>
+            Binance Agent OS Mini Hackathon (Track A - Agent Creation) • Generated automatically by Binance PortfolioPulse AI • Not financial advice.
+        </footer>
+    </div>
+</body>
+</html>

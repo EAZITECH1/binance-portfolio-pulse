@@ -1,0 +1,78 @@
+{
+  "headline": "Crypto Markets Advance: SUI (+14.7%) and SOL Lead Altcoin Rally as BTC Stabilizes at $63,450",
+  "sentiment": "MODERATE_RISK_ON",
+  "key_points": [
+    "Bitcoin (BTC) is trading at $63,450.00 (+3.15%), consolidating above key support as volume holds steady.",
+    "Top performers: SUI (+14.7%), SOL (+9.4%) demonstrate strong selective altcoin momentum.",
+    "Laggards: ARB (-3.4%), NEAR (-7.8%) faced localized profit taking.",
+    "On-chain activity: BNB Chain recorded 4.2M daily txs with gas at 3.0 Gwei; Ethereum mainnet gas averaged 12.5 Gwei.",
+    "Whale flows show net outflow ($320M), pointing to continued institutional spot accumulation."
+  ],
+  "top_gainers": [
+    {
+      "asset": "SUI",
+      "symbol": "SUIUSDT",
+      "price": 1.82,
+      "priceChangePercent": 14.65,
+      "high24h": 1.88,
+      "low24h": 1.58,
+      "volume24hUsd": 98280000.0
+    },
+    {
+      "asset": "SOL",
+      "symbol": "SOLUSDT",
+      "price": 164.8,
+      "priceChangePercent": 9.42,
+      "high24h": 168.5,
+      "low24h": 148.2,
+      "volume24hUsd": 670000000.0
+    },
+    {
+      "asset": "PEPE",
+      "symbol": "PEPEUSDT",
+      "price": 9.5e-06,
+      "priceChangePercent": 8.3,
+      "high24h": 9.8e-06,
+      "low24h": 8.7e-06,
+      "volume24hUsd": 137750000.0
+    }
+  ],
+  "top_losers": [
+    {
+      "asset": "ARB",
+      "symbol": "ARBUSDT",
+      "price": 0.585,
+      "priceChangePercent": -3.4,
+      "high24h": 0.612,
+      "low24h": 0.578,
+      "volume24hUsd": 18720000.0
+    },
+    {
+      "asset": "NEAR",
+      "symbol": "NEARUSDT",
+      "price": 4.1,
+      "priceChangePercent": -7.85,
+      "high24h": 4.55,
+      "low24h": 4.02,
+      "volume24hUsd": 78000000.0
+    }
+  ],
+  "metrics": {
+    "btc_price": 63450.0,
+    "btc_change_24h": 3.15,
+    "eth_price": 2720.0,
+    "eth_change_24h": -2.45,
+    "sol_price": 164.8,
+    "sol_change_24h": 9.42,
+    "top_gainer_asset": "SUI",
+    "top_gainer_pct": 14.65,
+    "bnb_txs": "4.2M",
+    "bnb_gas": "3.0",
+    "eth_gas": "12.5",
+    "eth_dex_vol": "1.85B",
+    "tvl_usd": "94.5B",
+    "tvl_change": "+1.9%",
+    "whale_signal": "NET_OUTFLOW ($320M)"
+  },
+  "generated_at": "2026-09-07 02:19:14 UTC"
+}

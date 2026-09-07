@@ -2,7 +2,7 @@
 Realistic mock data provider for Binance PortfolioPulse AI.
 Enables judges and reviewers to test the entire agent pipeline without requiring live API keys.
 """
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import time
 
 
@@ -66,6 +66,60 @@ class MockDataProvider:
                 "lowPrice": "4.02",
                 "volume": "18400000.00",
                 "quoteVolume": "78000000.00",
+            },
+            "AVAXUSDT": {
+                "symbol": "AVAXUSDT",
+                "lastPrice": "28.40",
+                "priceChangePercent": "4.12",
+                "highPrice": "29.20",
+                "lowPrice": "27.10",
+                "volume": "1120000.00",
+                "quoteVolume": "31800000.00",
+            },
+            "DOGEUSDT": {
+                "symbol": "DOGEUSDT",
+                "lastPrice": "0.1140",
+                "priceChangePercent": "-1.20",
+                "highPrice": "0.1180",
+                "lowPrice": "0.1120",
+                "volume": "420000000.00",
+                "quoteVolume": "47880000.00",
+            },
+            "SUIUSDT": {
+                "symbol": "SUIUSDT",
+                "lastPrice": "1.82",
+                "priceChangePercent": "14.65",
+                "highPrice": "1.88",
+                "lowPrice": "1.58",
+                "volume": "54000000.00",
+                "quoteVolume": "98280000.00",
+            },
+            "LINKUSDT": {
+                "symbol": "LINKUSDT",
+                "lastPrice": "12.25",
+                "priceChangePercent": "2.80",
+                "highPrice": "12.60",
+                "lowPrice": "11.90",
+                "volume": "2100000.00",
+                "quoteVolume": "25725000.00",
+            },
+            "ARBUSDT": {
+                "symbol": "ARBUSDT",
+                "lastPrice": "0.585",
+                "priceChangePercent": "-3.40",
+                "highPrice": "0.612",
+                "lowPrice": "0.578",
+                "volume": "32000000.00",
+                "quoteVolume": "18720000.00",
+            },
+            "PEPEUSDT": {
+                "symbol": "PEPEUSDT",
+                "lastPrice": "0.0000095",
+                "priceChangePercent": "8.30",
+                "highPrice": "0.0000098",
+                "lowPrice": "0.0000087",
+                "volume": "14500000000000.00",
+                "quoteVolume": "137750000.00",
             },
             "USDTUSDT": {
                 "symbol": "USDTUSDT",
@@ -131,3 +185,103 @@ class MockDataProvider:
             klines.append([t_open, str(o), str(h), str(l), str(c), str(v), t_open + day_ms - 1])
             
         return klines
+
+    def get_market_overview(self, watchlist: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Return comprehensive market overview across a watchlist of assets.
+        Calculates top gainers, top losers, total volume, and sentiment.
+        """
+        if not watchlist:
+            watchlist = ["BTC", "ETH", "SOL", "BNB", "SUI", "NEAR", "AVAX", "PEPE", "DOGE", "LINK", "ARB"]
+
+        items = []
+        total_vol_usd = 0.0
+
+        for asset in watchlist:
+            sym = f"{asset.upper()}USDT"
+            t = self.get_ticker_24hr(sym)
+            price = float(t.get("lastPrice", 0.0))
+            change_pct = float(t.get("priceChangePercent", 0.0))
+            quote_vol = float(t.get("quoteVolume", 0.0))
+            total_vol_usd += quote_vol
+
+            items.append({
+                "asset": asset.upper(),
+                "symbol": sym,
+                "price": price,
+                "priceChangePercent": change_pct,
+                "high24h": float(t.get("highPrice", price)),
+                "low24h": float(t.get("lowPrice", price)),
+                "volume24hUsd": quote_vol,
+            })
+
+        # Rank by performance
+        sorted_by_change = sorted(items, key=lambda x: x["priceChangePercent"], reverse=True)
+        top_gainers = sorted_by_change[:3]
+        top_losers = sorted_by_change[-2:]
+
+        # Classify market sentiment
+        avg_change = sum(x["priceChangePercent"] for x in items) / len(items) if items else 0.0
+        if avg_change > 3.0:
+            sentiment = "BULLISH_EXPANSION"
+        elif avg_change > 0.5:
+            sentiment = "MODERATE_RISK_ON"
+        elif avg_change < -3.0:
+            sentiment = "BEARISH_RETREAT"
+        elif avg_change < -0.5:
+            sentiment = "MILD_PULLBACK"
+        else:
+            sentiment = "NEUTRAL_CONSOLIDATION"
+
+        return {
+            "timestamp": int(time.time()),
+            "sentiment": sentiment,
+            "average_24h_change_pct": round(avg_change, 2),
+            "total_tracked_volume_usd": round(total_vol_usd, 2),
+            "top_gainers": top_gainers,
+            "top_losers": top_losers,
+            "assets": items,
+        }
+
+    def get_onchain_snapshot(self) -> Dict[str, Any]:
+        """Return simulated multi-chain on-chain metrics and oracle feed data."""
+        return {
+            "timestamp": int(time.time()),
+            "bnb_chain": {
+                "gas_gwei": 3.0,
+                "gas_status": "FAST_CHEAP",
+                "active_addresses_24h": 1420000,
+                "daily_transactions": 4250000,
+                "dex_volume_24h_usd": 890000000.0,
+            },
+            "ethereum": {
+                "gas_gwei": 12.5,
+                "gas_status": "NORMAL",
+                "active_addresses_24h": 410000,
+                "daily_transactions": 1150000,
+                "dex_volume_24h_usd": 1850000000.0,
+            },
+            "solana": {
+                "tps": 2850,
+                "active_wallets_24h": 2200000,
+                "dex_volume_24h_usd": 2100000000.0,
+            },
+            "defi_pulse": {
+                "total_tvl_usd": 94500000000.0,
+                "tvl_24h_change_pct": 1.85,
+                "stablecoin_market_cap_usd": 168200000000.0,
+                "stablecoin_net_inflow_24h_usd": 245000000.0,
+            },
+            "oracle_network": {
+                "provider": "Binance Oracle / Pyth Feed",
+                "active_feeds": 48,
+                "health": "OPTIMAL",
+                "avg_latency_ms": 115,
+            },
+            "whale_flow": {
+                "large_txs_count": 142,
+                "net_exchange_flow": "NET_OUTFLOW",
+                "net_outflow_usd": 320000000.0,
+                "interpretation": "Accumulation / Cold storage transfers observed across BTC and ETH.",
+            },
+        }

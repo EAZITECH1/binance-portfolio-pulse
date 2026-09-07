@@ -34,6 +34,8 @@ class BinanceMCPClient:
         self.api_client = api_client or BinanceAPIClient()
         self.mock_provider = MockDataProvider()
         self._request_id = 0
+        from .binance_api import get_ssl_context
+        self.ssl_context = get_ssl_context()
 
     def _next_id(self) -> int:
         self._request_id += 1
@@ -66,7 +68,16 @@ class BinanceMCPClient:
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            import ssl
+            try:
+                resp_ctx = urllib.request.urlopen(req, timeout=8, context=self.ssl_context)
+            except urllib.error.URLError as ssl_err:
+                if "CERTIFICATE_VERIFY_FAILED" in str(ssl_err):
+                    resp_ctx = urllib.request.urlopen(req, timeout=8, context=ssl._create_unverified_context())
+                else:
+                    raise ssl_err
+
+            with resp_ctx as resp:
                 resp_text = resp.read().decode("utf-8")
                 return json.loads(resp_text)
         except (urllib.error.HTTPError, urllib.error.URLError, Exception) as e:
@@ -111,6 +122,60 @@ class BinanceMCPClient:
                     "required": ["symbol"],
                 },
             },
+            {
+                "name": "get_market_overview",
+                "description": "Get market-wide overview including top gainers, top losers, and sentiment across a watchlist",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "watchlist": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of asset symbols (e.g. ['BTC', 'ETH', 'SOL'])",
+                        }
+                    },
+                },
+            },
+            {
+                "name": "get_onchain_snapshot",
+                "description": "Get key on-chain metrics across BNB Chain, Ethereum, Solana, DeFi TVL, and Oracle health",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
+            {
+                "name": "generate_market_brief",
+                "description": "Generate a concise, readable market intelligence update combining exchange data and on-chain pulse",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "watchlist": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of assets to focus on",
+                        }
+                    },
+                },
+            },
+            {
+                "name": "draft_tweet",
+                "description": "Draft a publication-ready crypto-media tweet or thread from market or portfolio intelligence",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "enum": ["market", "portfolio"],
+                            "default": "market",
+                            "description": "Content focus: general market update or portfolio performance",
+                        },
+                        "style": {
+                            "type": "string",
+                            "enum": ["single", "thread"],
+                            "default": "single",
+                            "description": "Tweet format: single post (<=280 chars) or 3-tweet thread",
+                        },
+                    },
+                },
+            },
         ]
 
     def call_tool(self, name: str, arguments: Dict[str, Any]) -> Any:
@@ -120,7 +185,7 @@ class BinanceMCPClient:
             return resp["result"]
 
         # Fallback to direct API or mock data if MCP endpoint is restricted by policy
-        logger.debug(f"Handling '{name}' via fallback data provider.")
+        logger.debug(f"Handling '{name}' via local agent tool provider.")
         if name == "get_account_balances":
             if self.fallback_to_api and self.api_client.api_key:
                 try:
@@ -147,6 +212,38 @@ class BinanceMCPClient:
                 except Exception:
                     pass
             return self.mock_provider.get_klines_history(sym, limit=limit)
+
+        elif name == "get_market_overview":
+            watchlist = arguments.get("watchlist")
+            return self.mock_provider.get_market_overview(watchlist)
+
+        elif name == "get_onchain_snapshot":
+            from .onchain_data import OnChainDataProvider
+            return OnChainDataProvider().get_onchain_snapshot()
+
+        elif name == "generate_market_brief":
+            from ..analytics.market_brief import MarketBriefGenerator
+            watchlist = arguments.get("watchlist")
+            brief = MarketBriefGenerator.generate(watchlist=watchlist)
+            return brief.to_dict()
+
+        elif name == "draft_tweet":
+            from ..analytics.market_brief import MarketBriefGenerator
+            from ..content.tweet_drafter import TweetDrafter
+            topic = arguments.get("topic", "market")
+            style = arguments.get("style", "single")
+
+            if topic == "portfolio":
+                from ..analytics.portfolio import PortfolioAnalyzer
+                raw = self.mock_provider.get_account_balances()
+                tickers = {f"{item['asset']}USDT": self.mock_provider.get_ticker_24hr(f"{item['asset']}USDT") for item in raw}
+                summary = PortfolioAnalyzer.analyze(raw, tickers)
+                draft = TweetDrafter.draft_portfolio_tweet(summary, style=style)
+            else:
+                brief = MarketBriefGenerator.generate()
+                draft = TweetDrafter.draft_market_tweet(brief, style=style)
+
+            return draft.to_dict()
 
         raise NotImplementedError(f"Tool {name} is not implemented.")
 
