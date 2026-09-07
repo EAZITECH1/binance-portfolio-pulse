@@ -65,6 +65,7 @@ class AgentConfig:
     
     # Output and AI Options
     output_dir: str = os.getenv("REPORTS_OUTPUT_DIR", "reports")
+    anthropic_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)
     gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY", None)
     openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)
 

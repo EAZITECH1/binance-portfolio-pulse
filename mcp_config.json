@@ -1,13 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/mcp-config.json",
   "mcpServers": {
-    "binance-agent-os": {
+    "binance-portfoliopulse": {
       "command": "python3",
       "args": ["-m", "src.connectors.mcp_client", "--stdio"],
-      "description": "Binance Agent OS MCP Server interface for market intelligence, price feed analytics, tweet drafting, and portfolio risk reports",
       "env": {
-        "BINANCE_MCP_ENDPOINT": "https://agent.binance.com/mcp/agentic",
-        "AGENT_MODE": "mock"
+        "PYTHONPATH": "."
       }
     },
     "binance-official-hosted": {

@@ -196,6 +196,7 @@ def generate_portfolio_report(
         summary=summary,
         risk=risk,
         trends=trends,
+        anthropic_api_key=config.anthropic_api_key,
         gemini_api_key=config.gemini_api_key,
         openai_api_key=config.openai_api_key,
     )
@@ -229,10 +230,16 @@ def generate_portfolio_report(
 
     # Optional: Draft portfolio tweet if requested
     if draft_tweet:
-        draft = TweetDrafter.draft_portfolio_tweet(summary, ai_summary, style=tweet_style)
+        draft = TweetDrafter.draft_portfolio_tweet(
+            summary,
+            ai_summary,
+            style=tweet_style,
+            anthropic_api_key=config.anthropic_api_key,
+        )
         tweet_path = out_path / f"{prefix}_tweet.md"
         with open(tweet_path, "w", encoding="utf-8") as f:
             f.write(f"# 🐦 Ready-to-Post Portfolio Tweet ({tweet_style.upper()})\n\n{draft.formatted_preview}\n")
+
         generated_files["tweet"] = str(tweet_path)
         logger.info(f"Drafted tweet saved -> {tweet_path}")
         print("\n" + "-" * 64)
@@ -299,7 +306,11 @@ def generate_market_brief_report(
 
     # 3. Optional: Draft Tweet
     if draft_tweet:
-        draft = TweetDrafter.draft_market_tweet(brief, style=tweet_style)
+        draft = TweetDrafter.draft_market_tweet(
+            brief,
+            style=tweet_style,
+            anthropic_api_key=config.anthropic_api_key,
+        )
         tweet_path = out_path / f"{prefix}_tweet.md"
         with open(tweet_path, "w", encoding="utf-8") as f:
             f.write(f"# 🐦 Ready-to-Post Market Tweet ({tweet_style.upper()})\n\n{draft.formatted_preview}\n")
@@ -386,6 +397,12 @@ def main():
         help="Custom interval in minutes between runs for daemon/cron mode",
     )
     parser.add_argument(
+        "--ask",
+        type=str,
+        default=None,
+        help="Ask PortfolioPulse a natural language question (e.g. 'What is my highest risk asset?')",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -397,7 +414,25 @@ def main():
     if args.verbose:
         logger.setLevel(10)
 
+    # If --ask is specified, run the orchestrator and exit
+    if args.ask:
+        mcp_client = BinanceMCPClient()
+        result = mcp_client.ask_portfoliopulse(prompt=args.ask, mode=args.mode)
+        print("\n" + "=" * 64)
+        print(" 🤖 BINANCE PORTFOLIOPULSE AI - NATURAL LANGUAGE ANSWER")
+        print("=" * 64)
+        print(f" ❓ Question: {args.ask}")
+        print("-" * 64)
+        print(f" 💡 Answer:\n{result.get('answer', '')}\n")
+        if "actionable_takeaways" in result:
+            print(" 📌 Actionable Takeaways:")
+            for item in result["actionable_takeaways"]:
+                print(f"   • {item}")
+        print("=" * 64 + "\n")
+        return
+
     watchlist = [w.strip().upper() for w in args.watchlist.split(",")] if args.watchlist else None
+
 
     # Determine interval for recurring schedule
     interval_seconds = None

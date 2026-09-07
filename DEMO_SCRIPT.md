@@ -74,7 +74,7 @@
 ### Scene 5: Scheduling & Hackathon Wrap-Up (01:03 – 01:15)
 * **Visual:** Quick return to terminal showing `--schedule daily` daemon mode, followed by final screen with GitHub repo link `github.com/EAZITECH1/binance-portfolio-pulse`.
 * **Voiceover:**
-  > "PortfolioPulse runs on-demand or as an autonomous daily daemon. It exposes 7 MCP tools, has 100% test coverage, and works zero-key out of the box. Check out our open-source repo on GitHub!"
+  > "PortfolioPulse runs on-demand or as an autonomous daily daemon. It exposes 8 MCP tools, has 100% test coverage, and works zero-key out of the box. Check out our open-source repo on GitHub!"
 
 ---
 

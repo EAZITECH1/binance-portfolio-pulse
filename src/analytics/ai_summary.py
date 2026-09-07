@@ -4,6 +4,9 @@ Translates crypto analytics, P&L, and risk flags into clear, conversational summ
 that any non-trader can immediately understand.
 Works 100% offline via a built-in financial reasoning engine, with optional Gemini/OpenAI enhancement.
 """
+import json
+import urllib.request
+import urllib.error
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
@@ -35,18 +38,91 @@ class AISummaryGenerator:
     """Generates plain-language insights for non-technical crypto holders."""
 
     @classmethod
+    def _generate_with_anthropic(
+        cls,
+        summary: PortfolioSummary,
+        risk: RiskAssessment,
+        trends: Dict[str, MarketTrendHighlight],
+        api_key: str,
+    ) -> Optional[PlainLanguageSummary]:
+        """Generate high-quality summary via Anthropic API (claude-sonnet-4-6)."""
+        prompt = (
+            "You are a friendly, expert crypto financial analyst for Binance PortfolioPulse AI.\n"
+            "Given the portfolio metrics below, generate a clear, conversational plain-language summary.\n\n"
+            f"Portfolio Valuation: ${summary.total_value_usd:,.2f}\n"
+            f"24h P&L: ${summary.total_24h_pnl_usd:,.2f} ({summary.total_24h_pnl_pct:+.2f}%)\n"
+            f"Stablecoin Reserves: ${summary.stablecoin_value_usd:,.2f} ({summary.stablecoin_pct:.1f}%)\n"
+            f"Asset Count: {summary.asset_count}\n"
+            f"Risk Level: {risk.risk_level} (Score: {risk.overall_score}/10)\n"
+            f"Risk Flags: {', '.join(f.title for f in risk.flags) if risk.flags else 'None'}\n"
+            f"Holdings Breakdown: {', '.join(f'{p.asset} ({p.allocation_pct:.1f}%, 24h: {p.change_24h_pct:+.1f}%)' for p in summary.positions[:5])}\n\n"
+            "Return ONLY valid JSON matching this exact structure without markdown backticks:\n"
+            "{\n"
+            '  "headline": "A concise punchy 1-sentence daily headline",\n'
+            '  "overview": "A 2-3 sentence conversational overview of account value and allocation",\n'
+            '  "market_drivers": "Bullet points with • describing what moved today",\n'
+            '  "risk_perspective": "A 2-sentence balanced risk perspective",\n'
+            '  "actionable_tips": ["Tip 1", "Tip 2"]\n'
+            "}"
+        )
+        try:
+            req_data = json.dumps({
+                "model": "claude-sonnet-4-6",
+                "max_tokens": 800,
+                "messages": [{"role": "user", "content": prompt}],
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                "https://api.anthropic.com/v1/messages",
+                data=req_data,
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                    "User-Agent": "Binance-PortfolioPulse-AI/1.0",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                resp_json = json.loads(resp.read().decode("utf-8"))
+                text_content = resp_json.get("content", [{}])[0].get("text", "").strip()
+                # Clean any markdown formatting if present
+                if text_content.startswith("```"):
+                    text_content = text_content.split("```")[1]
+                    if text_content.startswith("json"):
+                        text_content = text_content[4:]
+                parsed = json.loads(text_content.strip())
+                return PlainLanguageSummary(
+                    headline=parsed.get("headline", ""),
+                    overview=parsed.get("overview", ""),
+                    market_drivers=parsed.get("market_drivers", ""),
+                    risk_perspective=parsed.get("risk_perspective", ""),
+                    actionable_tips=parsed.get("actionable_tips", []),
+                )
+        except Exception as e:
+            logger.warning(f"Anthropic LLM summary generation failed: {e}. Falling back to rule-based synthesis.")
+            return None
+
+    @classmethod
     def generate(
         cls,
         summary: PortfolioSummary,
         risk: RiskAssessment,
         trends: Dict[str, MarketTrendHighlight],
+        anthropic_api_key: Optional[str] = None,
         gemini_api_key: Optional[str] = None,
         openai_api_key: Optional[str] = None,
     ) -> PlainLanguageSummary:
         """
         Synthesizes portfolio data into clear everyday language.
+        Uses Anthropic API if key is available; otherwise uses high-fidelity financial rules.
         """
+        if anthropic_api_key:
+            llm_summary = cls._generate_with_anthropic(summary, risk, trends, anthropic_api_key)
+            if llm_summary:
+                return llm_summary
+
         # Top performer and worst performer over 24h
+
         crypto_positions = [p for p in summary.positions if not p.is_stablecoin]
         crypto_positions_by_change = sorted(crypto_positions, key=lambda x: x.change_24h_pct, reverse=True)
 

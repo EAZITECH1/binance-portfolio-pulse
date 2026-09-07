@@ -21,10 +21,12 @@
 
 ## 🌟 Hackathon Track A Highlights
 
-1. **Native Binance Agent OS MCP Integration:**
-   - Implements full client connectivity to the official Binance MCP Server endpoint (`https://agent.binance.com/mcp/agentic`).
-   - Exposes 7 MCP tools: `get_market_overview`, `get_price_feed_snapshot`, `generate_market_brief`, `draft_tweet`, `get_account_balances`, `get_ticker_24hr`, and `get_klines`.
-   - Compatible with Claude Desktop, Claude Code, Cursor, and Codex workflows via `mcp_config.json`.
+PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, and also runs standalone via CLI with optional LLM-powered summaries.
+
+1. **Native Binance Agent OS MCP Integration & Dual Usage Modes:**
+   - Implements full client connectivity to the official Binance MCP Server endpoint (`https://agent.binance.com/mcp/agentic`) and interactive local stdio server.
+   - Exposes 8 MCP tools: `ask_portfoliopulse`, `get_market_overview`, `get_price_feed_snapshot`, `generate_market_brief`, `draft_tweet`, `get_account_balances`, `get_ticker_24hr`, and `get_klines`.
+   - Verified live in Claude Desktop, Claude Code, Cursor, and Codex workflows via `mcp_config.json`.
    - Strictly non-custodial with zero external withdrawal scope.
 
 2. **Market Intelligence & Price Feed Analysis:**

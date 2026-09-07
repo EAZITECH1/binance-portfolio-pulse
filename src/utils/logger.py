@@ -37,12 +37,12 @@ class Formatter(logging.Formatter):
 
 
 def setup_logger(name: str = "binance_pulse", level: int = logging.INFO) -> logging.Logger:
-    """Set up and return the application logger."""
+    """Set up and return the application logger directing to stderr so stdio protocol stdout remains clean."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
     
     if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
+        handler = logging.StreamHandler(sys.stderr)
         handler.setLevel(level)
         handler.setFormatter(Formatter())
         logger.addHandler(handler)
@@ -51,3 +51,4 @@ def setup_logger(name: str = "binance_pulse", level: int = logging.INFO) -> logg
 
 
 logger = setup_logger()
+

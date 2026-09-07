@@ -136,67 +136,116 @@ Are you taking profits into stables or riding the momentum?
 
 ---
 
-## 🔑 Binance Agent OS & MCP Setup
+---
 
-Binance Agent OS standardizes how AI agents communicate with Binance's trading infrastructure without local API key management or withdrawal risks.
+## ⚡ Two Ways to Use PortfolioPulse
 
-### Method 1: Claude Code CLI
-To register the Binance MCP server in Claude Code:
-```bash
-claude mcp add binance-mcp-server --transport http https://agent.binance.com/mcp/agentic
-```
-Open your agent session (type `/mcp`) and complete the browser-based OAuth authorization to link your Binance account.
+PortfolioPulse is designed to be versatile: you can interact with it conversationally inside an AI interface or run it independently as an automated CLI tool.
 
-### Method 2: Claude Desktop / Cursor / Codex Configuration
-Add the server definition from [`mcp_config.json`](mcp_config.json) to your AI client configuration:
+| Usage Mode | How It Works | Best For |
+| :--- | :--- | :--- |
+| **1. Claude Desktop / MCP Mode** | PortfolioPulse registers as an MCP server. Claude calls tools dynamically to answer questions, analyze risk, and draft tweets. | Interactive research, conversational inquiries, custom content drafting. |
+| **2. Standalone CLI Mode** | Run commands from terminal or cron (`--brief`, `--ask`, `--draft-tweet`, `--schedule`). Optional LLM enhancement via Claude Sonnet. | Scheduled daily reports, background daemons, headless automation, zero-setup testing. |
+
+---
+
+## 🖥️ Claude Desktop Setup (Step-by-Step)
+
+Connect PortfolioPulse to **Claude Desktop** to chat directly with your portfolio and market intelligence engine using natural language.
+
+### Step 1: Locate your Claude Desktop configuration file
+Find or create `claude_desktop_config.json` on your system:
+
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux:** `~/.config/Claude/claude_desktop_config.json`
+
+### Step 2: Add the PortfolioPulse MCP server entry
+Add the following entry under `mcpServers` (replace `/ABSOLUTE/PATH/TO/binance-portfolio-pulse` with the actual path to your cloned repository):
 
 ```json
 {
   "mcpServers": {
-    "binance-agent-os": {
+    "binance-portfoliopulse": {
       "command": "python3",
-      "args": ["-m", "src.connectors.mcp_client", "--stdio"]
-    },
-    "binance-official-hosted": {
-      "url": "https://agent.binance.com/mcp/agentic"
+      "args": ["-m", "src.connectors.mcp_client", "--stdio"],
+      "env": {
+        "PYTHONPATH": "/ABSOLUTE/PATH/TO/binance-portfolio-pulse"
+      }
     }
   }
 }
 ```
 
-### Callable MCP Tools Exposed:
-1. `get_market_overview(watchlist=[...])`: Pulls prices, 24h change %, volume, and top movers across custom or default tokens.
-2. `get_price_feed_snapshot()`: Ingests BNB Chain gas, Ethereum gas, DEX volumes, TVL, and oracle status.
-3. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (headline + 5 key points).
-4. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Formats verified intelligence into a publication-ready post.
-5. `get_account_balances()`: Fetches spot balances from Binance Agentic sub-account.
-6. `get_ticker_24hr(symbol)`: Rolling 24h price and volume statistics.
-7. `get_klines(symbol, interval, limit)`: Historical candlesticks for trend analysis.
+> **Tip:** You can also copy this directly from [`mcp_config.json`](mcp_config.json). If `python3` is in a virtual environment, specify the full path to that python binary.
+
+### Step 3: Restart Claude Desktop
+Completely quit Claude Desktop (**Cmd + Q** on macOS or **File > Exit** on Windows) and relaunch the app.
+
+### Step 4: Verify MCP tool discovery
+Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 8 exposed tools active and ready!
+
+### Step 5: Try these prompt examples in Claude Desktop
+Type any of these prompts directly into Claude:
+
+1. 💬 *"Use PortfolioPulse to give me a market update and draft a tweet about it."*
+2. 💬 *"What is my highest risk asset in PortfolioPulse?"*
+3. 💬 *"Analyze today's top gainers and price feed snapshot."*
+4. 💬 *"Create a 3-part Twitter thread breaking down today's altcoin action and gas fees."*
 
 ---
 
-## 💻 CLI Usage & Commands
+## 🔌 Callable MCP Tools Exposed
+
+PortfolioPulse exposes 8 high-level and granular tools conforming to the Model Context Protocol standard:
+
+1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, and market conditions.
+2. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens.
+3. `get_price_feed_snapshot()`: Pulls live network gas fees (BNB Chain, Ethereum), 24h DEX volumes, active wallets, and DeFi TVL metrics.
+4. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points).
+5. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
+6. `get_account_balances()`: Fetches spot balances and asset values.
+7. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
+8. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
+
+---
+
+## 💻 Standalone CLI Usage & LLM Synthesis
+
+When running outside Claude Desktop, PortfolioPulse operates as a powerful standalone CLI with optional real LLM generation powered by Anthropic's `claude-sonnet-4-6`.
 
 ```bash
-# 1. Market Intelligence & Social Content
+# 1. Ask natural language questions via CLI
+python3 run_agent.py --ask "What is my highest risk asset?"
+python3 run_agent.py --ask "Give me a quick market summary and draft a tweet"
+
+# 2. Market Intelligence & Social Content
 python3 run_agent.py --brief market                                         # Market brief
 python3 run_agent.py --brief market --draft-tweet --tweet-style single      # Single tweet (<=280 chars)
 python3 run_agent.py --brief market --draft-tweet --tweet-style thread      # 3-tweet thread
 python3 run_agent.py --brief market --watchlist "BTC,ETH,SOL,BNB,SUI,AVAX"  # Custom watchlist
 
-# 2. Portfolio Risk Analysis
+# 3. Portfolio Risk Analysis & Dashboards
 python3 run_agent.py --brief portfolio --format all                         # Full portfolio report (MD, HTML, JSON)
 python3 run_agent.py --brief portfolio --draft-tweet                        # Portfolio report + drafted tweet
 
-# 3. Connectivity Modes
-python3 run_agent.py --mode mock --brief market                             # Zero-key demonstration
+# 4. Connectivity Modes
+python3 run_agent.py --mode mock --brief market                             # Zero-key offline demonstration
 python3 run_agent.py --mode mcp --brief market                              # Live Binance Agent OS MCP
 python3 run_agent.py --mode api --brief market                              # Direct Binance Exchange REST
 
-# 4. Automation & Daemon Scheduling
+# 5. Recurring Automation & Daemon Scheduling
 python3 run_agent.py --brief market --schedule daily                        # Automated daily brief
 python3 run_agent.py --brief market --interval-minutes 60                   # Hourly recurring market monitor
 ```
+
+### 🧠 Optional LLM-Powered Generation (Anthropic Claude Sonnet)
+By default, PortfolioPulse uses a deterministic template synthesizer that requires zero external API keys. To upgrade to real-time generative writing:
+1. Add your key to `.env`:
+   ```bash
+   ANTHROPIC_API_KEY=sk-ant-api03-...
+   ```
+2. Any market brief, portfolio summary, or drafted tweet will automatically use Anthropic's **`claude-sonnet-4-6`** to produce nuanced financial commentary. If no key is provided, the system gracefully falls back to the template engine.
 
 ---
 

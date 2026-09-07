@@ -176,7 +176,98 @@ class BinanceMCPClient:
                     },
                 },
             },
+            {
+                "name": "ask_portfoliopulse",
+                "description": "Orchestrator tool: Ask PortfolioPulse any question about your Binance portfolio or the crypto market to get an autonomous intelligence analysis and actionable takeaways",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Natural language question or request (e.g. 'What is my highest risk asset?' or 'Give me an executive market briefing')",
+                        },
+                        "watchlist": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional asset symbols to include in market context",
+                        },
+                    },
+                    "required": ["prompt"],
+                },
+            },
         ]
+
+    def ask_portfoliopulse(
+        self,
+        prompt: str,
+        watchlist: Optional[List[str]] = None,
+        mode: str = "mock",
+    ) -> Dict[str, Any]:
+        """
+        Orchestrator method that ingests balances, market tickers, risk assessment,
+        and uses LLM synthesis or financial rule engine to answer any query.
+        """
+        from ..analytics.portfolio import PortfolioAnalyzer
+        from ..analytics.risk_analyzer import RiskAnalyzer
+        from ..analytics.market_trends import MarketTrendAnalyzer
+        from ..analytics.ai_summary import AISummaryGenerator
+        from ..analytics.market_brief import MarketBriefGenerator
+        from ..config import config
+
+        # Ingest balances & tickers
+        raw = self.mock_provider.get_account_balances() if mode == "mock" else self.call_tool("get_account_balances", {})
+        tickers = {}
+        trends = {}
+        for item in raw:
+            asset = item.get("asset", "").upper()
+            if asset in ("USDT", "USDC", "FDUSD"):
+                continue
+            sym = f"{asset}USDT"
+            t = self.mock_provider.get_ticker_24hr(sym)
+            tickers[sym] = t
+            k = self.mock_provider.get_klines_history(sym, limit=7)
+            trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
+
+        summary = PortfolioAnalyzer.analyze(raw, tickers)
+        risk = RiskAnalyzer.evaluate(
+            summary=summary,
+            trends=trends,
+            concentration_threshold=config.risk_concentration_threshold,
+            volatility_threshold=config.risk_volatility_threshold,
+            min_stablecoin_buffer=config.min_stablecoin_buffer,
+        )
+        ai_summary = AISummaryGenerator.generate(
+            summary=summary,
+            risk=risk,
+            trends=trends,
+            anthropic_api_key=config.anthropic_api_key,
+            gemini_api_key=config.gemini_api_key,
+            openai_api_key=config.openai_api_key,
+        )
+        brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode)
+
+        # Build comprehensive answer
+        answer = (
+            f"Portfolio Valuation: ${summary.total_value_usd:,.2f} | 24h P&L: {'+' if summary.total_24h_pnl_usd >= 0 else ''}${summary.total_24h_pnl_usd:,.2f} ({summary.total_24h_pnl_pct:+.2f}%)\n"
+            f"Risk Level: {risk.risk_level} (Score: {risk.overall_score}/10)\n\n"
+            f"Analysis for: \"{prompt}\"\n\n"
+            f"Executive Summary: {ai_summary.headline}\n\n"
+            f"Market Context: {brief.headline}\n\n"
+            f"Overview: {ai_summary.overview}"
+        )
+
+        return {
+            "query": prompt,
+            "answer": answer,
+            "portfolio_valuation_usd": summary.total_value_usd,
+            "pnl_24h_usd": summary.total_24h_pnl_usd,
+            "risk_level": risk.risk_level,
+            "risk_score": risk.overall_score,
+            "risk_flags": [f.title for f in risk.flags],
+            "actionable_takeaways": ai_summary.actionable_tips,
+            "market_headline": brief.headline,
+            "market_sentiment": brief.sentiment,
+        }
 
     def call_tool(self, name: str, arguments: Dict[str, Any]) -> Any:
         """Call a specific Binance MCP tool with fallback capability."""
@@ -230,6 +321,7 @@ class BinanceMCPClient:
         elif name == "draft_tweet":
             from ..analytics.market_brief import MarketBriefGenerator
             from ..content.tweet_drafter import TweetDrafter
+            from ..config import config
             topic = arguments.get("topic", "market")
             style = arguments.get("style", "single")
 
@@ -238,14 +330,28 @@ class BinanceMCPClient:
                 raw = self.mock_provider.get_account_balances()
                 tickers = {f"{item['asset']}USDT": self.mock_provider.get_ticker_24hr(f"{item['asset']}USDT") for item in raw}
                 summary = PortfolioAnalyzer.analyze(raw, tickers)
-                draft = TweetDrafter.draft_portfolio_tweet(summary, style=style)
+                draft = TweetDrafter.draft_portfolio_tweet(
+                    summary,
+                    style=style,
+                    anthropic_api_key=config.anthropic_api_key,
+                )
             else:
                 brief = MarketBriefGenerator.generate()
-                draft = TweetDrafter.draft_market_tweet(brief, style=style)
+                draft = TweetDrafter.draft_market_tweet(
+                    brief,
+                    style=style,
+                    anthropic_api_key=config.anthropic_api_key,
+                )
 
             return draft.to_dict()
 
+        elif name == "ask_portfoliopulse":
+            prompt = arguments.get("prompt", "Analyze my portfolio status")
+            watchlist = arguments.get("watchlist")
+            return self.ask_portfoliopulse(prompt=prompt, watchlist=watchlist)
+
         raise NotImplementedError(f"Tool {name} is not implemented.")
+
 
 
 def run_stdio_mcp_server():
@@ -256,15 +362,21 @@ def run_stdio_mcp_server():
     mcp_client = BinanceMCPClient()
     logger.info("Starting Binance Agent OS stdio MCP Server...")
 
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
+    while True:
         try:
+            line = sys.stdin.readline()
+            if not line:
+                # EOF reached
+                break
+            line = line.strip()
+            if not line:
+                continue
+
             req = json.loads(line)
             req_id = req.get("id")
             method = req.get("method")
             params = req.get("params", {})
+
 
             if method == "initialize":
                 response = {
@@ -298,7 +410,15 @@ def run_stdio_mcp_server():
                         ]
                     },
                 }
+            elif method == "notifications/initialized":
+                # Client notification after initialize; no response required
+                continue
+            elif method == "ping":
+                response = {"jsonrpc": "2.0", "id": req_id, "result": {}}
             else:
+                if req_id is None:
+                    # Client notifications have no id and do not expect a response
+                    continue
                 response = {
                     "jsonrpc": "2.0",
                     "id": req_id,
@@ -308,13 +428,15 @@ def run_stdio_mcp_server():
             sys.stdout.write(json.dumps(response) + "\n")
             sys.stdout.flush()
         except Exception as e:
-            err_resp = {
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {"code": -32603, "message": str(e)},
-            }
-            sys.stdout.write(json.dumps(err_resp) + "\n")
-            sys.stdout.flush()
+            if req_id is not None:
+                err_resp = {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32603, "message": str(e)},
+                }
+                sys.stdout.write(json.dumps(err_resp) + "\n")
+                sys.stdout.flush()
+
 
 
 if __name__ == "__main__":
