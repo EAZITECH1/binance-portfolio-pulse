@@ -188,6 +188,8 @@ def generate_portfolio_report(
         summary=summary,
         risk=risk,
         trends=trends,
+        llm_api_key=config.llm_api_key,
+        llm_model=config.llm_model,
         anthropic_api_key=config.anthropic_api_key,
         gemini_api_key=config.gemini_api_key,
         openai_api_key=config.openai_api_key,
@@ -226,7 +228,8 @@ def generate_portfolio_report(
             summary,
             ai_summary,
             style=tweet_style,
-            anthropic_api_key=config.anthropic_api_key,
+            llm_api_key=config.llm_api_key,
+            llm_model=config.llm_model,
         )
         tweet_path = out_path / f"{prefix}_tweet.md"
         with open(tweet_path, "w", encoding="utf-8") as f:
@@ -301,7 +304,8 @@ def generate_market_brief_report(
         draft = TweetDrafter.draft_market_tweet(
             brief,
             style=tweet_style,
-            anthropic_api_key=config.anthropic_api_key,
+            llm_api_key=config.llm_api_key,
+            llm_model=config.llm_model,
         )
         tweet_path = out_path / f"{prefix}_tweet.md"
         with open(tweet_path, "w", encoding="utf-8") as f:

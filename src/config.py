@@ -63,9 +63,12 @@ class AgentConfig:
         os.getenv("MIN_STABLECOIN_BUFFER", "0.10")
     )
     
-    # Output and AI Options
+    # Output and LLM Options
     output_dir: str = os.getenv("REPORTS_OUTPUT_DIR", "reports")
-    anthropic_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)
+    llm_api_key: Optional[str] = os.getenv("LLM_API_KEY", os.getenv("ANTHROPIC_API_KEY", None))
+    llm_model: str = os.getenv("LLM_MODEL", "your-model-name-here")
+    llm_base_url: Optional[str] = os.getenv("LLM_BASE_URL", None)
+    anthropic_api_key: Optional[str] = llm_api_key
     gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY", None)
     openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)
 

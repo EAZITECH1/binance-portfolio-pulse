@@ -211,7 +211,7 @@ PortfolioPulse exposes 7 high-level and granular tools conforming to the Model C
 
 ## 💻 Standalone CLI Usage & LLM Synthesis
 
-When running outside Claude Desktop, PortfolioPulse operates as a powerful standalone CLI with optional real LLM generation powered by Anthropic's `claude-sonnet-4-6`.
+When running outside Claude Desktop, PortfolioPulse operates as a powerful standalone CLI with an optional LLM generation layer allowing anyone to plug in their own preferred model and API key.
 
 ```bash
 # 1. Ask natural language questions via CLI
@@ -238,13 +238,18 @@ python3 run_agent.py --brief market --schedule daily                        # Au
 python3 run_agent.py --brief market --interval-minutes 60                   # Hourly recurring market monitor
 ```
 
-### 🧠 Optional LLM-Powered Generation (Anthropic Claude Sonnet)
-By default, PortfolioPulse uses a deterministic template synthesizer that requires zero external API keys. To upgrade to real-time generative writing:
-1. Add your key to `.env`:
+### 🧠 Optional LLM-Powered Generation (Model-Agnostic)
+By default, PortfolioPulse uses an intelligent deterministic financial rule engine that requires **zero external LLM API keys**.
+
+To upgrade standalone CLI outputs with your own generative model (e.g. Claude, GPT, DeepSeek, or any custom endpoint):
+1. In your `.env` file, simply provide your model name and key:
    ```bash
-   ANTHROPIC_API_KEY=sk-ant-api03-...
+   LLM_API_KEY=your_api_key_here
+   LLM_MODEL=your-model-name-here
+   # Optional custom endpoint / proxy URL:
+   # LLM_BASE_URL=https://api.your-provider.com/v1
    ```
-2. Any market brief, portfolio summary, or drafted tweet will automatically use Anthropic's **`claude-sonnet-4-6`** to produce nuanced financial commentary. If no key is provided, the system gracefully falls back to the template engine.
+2. Any market brief, portfolio summary, or drafted tweet will automatically synthesize commentary using your specified model. If left unconfigured or set to the default placeholder, PortfolioPulse gracefully executes via its built-in quantitative financial reasoning engine.
 
 ---
 

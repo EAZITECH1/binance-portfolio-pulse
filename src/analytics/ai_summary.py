@@ -38,14 +38,20 @@ class AISummaryGenerator:
     """Generates plain-language insights for non-technical crypto holders."""
 
     @classmethod
-    def _generate_with_anthropic(
+    def _generate_with_llm(
         cls,
         summary: PortfolioSummary,
         risk: RiskAssessment,
         trends: Dict[str, MarketTrendHighlight],
         api_key: str,
+        model: Optional[str] = None,
     ) -> Optional[PlainLanguageSummary]:
-        """Generate high-quality summary via Anthropic API (claude-sonnet-4-6)."""
+        """Generate high-quality summary via configurable LLM API (model placeholder)."""
+        from ..config import config
+        target_model = model or config.llm_model
+        if not api_key or api_key.strip() in ("", "your_api_key_here", "your_llm_api_key_here") or target_model == "your-model-name-here":
+            return None
+
         prompt = (
             "You are a friendly, expert crypto financial analyst for Binance PortfolioPulse AI.\n"
             "Given the portfolio metrics below, generate a clear, conversational plain-language summary.\n\n"
@@ -66,26 +72,41 @@ class AISummaryGenerator:
             "}"
         )
         try:
-            req_data = json.dumps({
-                "model": "claude-sonnet-4-6",
-                "max_tokens": 800,
-                "messages": [{"role": "user", "content": prompt}],
-            }).encode("utf-8")
-            req = urllib.request.Request(
-                "https://api.anthropic.com/v1/messages",
-                data=req_data,
-                headers={
+            is_openai = target_model.startswith("gpt-") or target_model.startswith("o1") or target_model.startswith("o3")
+            if is_openai:
+                url = config.llm_base_url or "https://api.openai.com/v1/chat/completions"
+                req_data = json.dumps({
+                    "model": target_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,
+                }).encode("utf-8")
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "content-type": "application/json",
+                    "User-Agent": "Binance-PortfolioPulse-AI/1.0",
+                }
+            else:
+                url = config.llm_base_url or "https://api.anthropic.com/v1/messages"
+                req_data = json.dumps({
+                    "model": target_model,
+                    "max_tokens": 800,
+                    "messages": [{"role": "user", "content": prompt}],
+                }).encode("utf-8")
+                headers = {
                     "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                     "content-type": "application/json",
                     "User-Agent": "Binance-PortfolioPulse-AI/1.0",
-                },
-                method="POST",
-            )
+                }
+
+            req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=12) as resp:
                 resp_json = json.loads(resp.read().decode("utf-8"))
-                text_content = resp_json.get("content", [{}])[0].get("text", "").strip()
-                # Clean any markdown formatting if present
+                if is_openai:
+                    text_content = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                else:
+                    text_content = resp_json.get("content", [{}])[0].get("text", "").strip()
+
                 if text_content.startswith("```"):
                     text_content = text_content.split("```")[1]
                     if text_content.startswith("json"):
@@ -99,8 +120,11 @@ class AISummaryGenerator:
                     actionable_tips=parsed.get("actionable_tips", []),
                 )
         except Exception as e:
-            logger.warning(f"Anthropic LLM summary generation failed: {e}. Falling back to rule-based synthesis.")
+            logger.warning(f"LLM summary generation failed: {e}. Falling back to rule-based synthesis.")
             return None
+
+    # Alias for backward compatibility
+    _generate_with_anthropic = _generate_with_llm
 
     @classmethod
     def generate(
@@ -109,15 +133,18 @@ class AISummaryGenerator:
         risk: RiskAssessment,
         trends: Dict[str, MarketTrendHighlight],
         anthropic_api_key: Optional[str] = None,
+        llm_api_key: Optional[str] = None,
+        llm_model: Optional[str] = None,
         gemini_api_key: Optional[str] = None,
         openai_api_key: Optional[str] = None,
     ) -> PlainLanguageSummary:
         """
         Synthesizes portfolio data into clear everyday language.
-        Uses Anthropic API if key is available; otherwise uses high-fidelity financial rules.
+        Uses configured LLM API if key is available; otherwise uses high-fidelity financial rules.
         """
-        if anthropic_api_key:
-            llm_summary = cls._generate_with_anthropic(summary, risk, trends, anthropic_api_key)
+        key = llm_api_key or anthropic_api_key
+        if key:
+            llm_summary = cls._generate_with_llm(summary, risk, trends, key, model=llm_model)
             if llm_summary:
                 return llm_summary
 

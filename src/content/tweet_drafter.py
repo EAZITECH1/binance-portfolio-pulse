@@ -49,14 +49,20 @@ class TweetDrafter:
         return text[:max_len - 3].rstrip() + "..."
 
     @classmethod
-    def _draft_with_anthropic(
+    def _draft_with_llm(
         cls,
         context_text: str,
         topic: str,
         style: str,
         api_key: str,
+        model: Optional[str] = None,
     ) -> Optional[List[str]]:
-        """Draft publication-ready tweets using Anthropic API (claude-sonnet-4-6)."""
+        """Draft publication-ready tweets using configurable LLM API (model placeholder)."""
+        from ..config import config
+        target_model = model or config.llm_model
+        if not api_key or api_key.strip() in ("", "your_api_key_here", "your_llm_api_key_here") or target_model == "your-model-name-here":
+            return None
+
         prompt = (
             f"You are a professional crypto journalist and Web3 content creator for Binance PortfolioPulse AI.\n"
             f"Given the {topic} intelligence below, write a ready-to-post {'single tweet' if style == 'single' else '3-tweet numbered thread (1/3, 2/3, 3/3)'}.\n"
@@ -68,25 +74,41 @@ class TweetDrafter:
             "Return ONLY a valid JSON array of strings (e.g. [\"Tweet text 1\", \"Tweet text 2\"]) with NO markdown formatting or commentary."
         )
         try:
-            req_data = json.dumps({
-                "model": "claude-sonnet-4-6",
-                "max_tokens": 600,
-                "messages": [{"role": "user", "content": prompt}],
-            }).encode("utf-8")
-            req = urllib.request.Request(
-                "https://api.anthropic.com/v1/messages",
-                data=req_data,
-                headers={
+            is_openai = target_model.startswith("gpt-") or target_model.startswith("o1") or target_model.startswith("o3")
+            if is_openai:
+                url = config.llm_base_url or "https://api.openai.com/v1/chat/completions"
+                req_data = json.dumps({
+                    "model": target_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.5,
+                }).encode("utf-8")
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "content-type": "application/json",
+                    "User-Agent": "Binance-PortfolioPulse-AI/1.0",
+                }
+            else:
+                url = config.llm_base_url or "https://api.anthropic.com/v1/messages"
+                req_data = json.dumps({
+                    "model": target_model,
+                    "max_tokens": 600,
+                    "messages": [{"role": "user", "content": prompt}],
+                }).encode("utf-8")
+                headers = {
                     "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                     "content-type": "application/json",
                     "User-Agent": "Binance-PortfolioPulse-AI/1.0",
-                },
-                method="POST",
-            )
+                }
+
+            req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=12) as resp:
                 resp_json = json.loads(resp.read().decode("utf-8"))
-                text_content = resp_json.get("content", [{}])[0].get("text", "").strip()
+                if is_openai:
+                    text_content = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                else:
+                    text_content = resp_json.get("content", [{}])[0].get("text", "").strip()
+
                 if text_content.startswith("```"):
                     text_content = text_content.split("```")[1]
                     if text_content.startswith("json"):
@@ -97,8 +119,11 @@ class TweetDrafter:
                 elif isinstance(parsed, str):
                     return [cls._truncate_if_needed(parsed)]
         except Exception as e:
-            logger.warning(f"Anthropic LLM tweet generation failed: {e}. Falling back to template drafter.")
+            logger.warning(f"LLM tweet generation failed: {e}. Falling back to template drafter.")
         return None
+
+    # Alias for backward compatibility
+    _draft_with_anthropic = _draft_with_llm
 
     @classmethod
     def draft_market_tweet(
@@ -106,15 +131,18 @@ class TweetDrafter:
         brief: Union[MarketBrief, Dict[str, Any]],
         style: str = "single",
         anthropic_api_key: Optional[str] = None,
+        llm_api_key: Optional[str] = None,
+        llm_model: Optional[str] = None,
     ) -> DraftedTweet:
         """Drafts a Cointelegraph/CMC style tweet from a MarketBrief."""
         b_dict = brief.to_dict() if hasattr(brief, "to_dict") else brief
         metrics = b_dict.get("metrics", {})
         top_gainers = b_dict.get("top_gainers", [])
 
-        if anthropic_api_key:
+        key = llm_api_key or anthropic_api_key
+        if key:
             context = f"Headline: {b_dict.get('headline')}\nSentiment: {b_dict.get('sentiment')}\nMetrics: {json.dumps(metrics)}\nKey Points: {json.dumps(b_dict.get('key_points', []))}"
-            llm_tweets = cls._draft_with_anthropic(context, topic="market", style=style, api_key=anthropic_api_key)
+            llm_tweets = cls._draft_with_llm(context, topic="market", style=style, api_key=key, model=llm_model)
             if llm_tweets:
                 char_counts = [len(t) for t in llm_tweets]
                 preview = "\n\n---\n\n".join(f"Tweet {i+1} ({len(t)}/280 chars):\n{t}" for i, t in enumerate(llm_tweets))
@@ -205,6 +233,8 @@ class TweetDrafter:
         ai_summary: Optional[PlainLanguageSummary] = None,
         style: str = "single",
         anthropic_api_key: Optional[str] = None,
+        llm_api_key: Optional[str] = None,
+        llm_model: Optional[str] = None,
     ) -> DraftedTweet:
         """Drafts a shareable personal portfolio performance post."""
         pnl_sign = "+" if summary.total_24h_pnl_usd >= 0 else "-"
@@ -215,7 +245,8 @@ class TweetDrafter:
         top_pos = summary.positions[0] if summary.positions else None
         top_asset_str = f"${top_pos.asset} ({top_pos.allocation_pct:.0f}%)" if top_pos else "Crypto"
 
-        if anthropic_api_key:
+        key = llm_api_key or anthropic_api_key
+        if key:
             context = (
                 f"Valuation: ${summary.total_value_usd:,.2f}\n"
                 f"24h P&L: {pnl_sign}${abs_pnl_usd:,.2f} ({pnl_sign}{abs_pnl_pct:.2f}%)\n"
@@ -223,7 +254,7 @@ class TweetDrafter:
                 f"Stables: ${summary.stablecoin_value_usd:,.2f} ({summary.stablecoin_pct:.1f}%)\n"
                 f"Holdings: {', '.join(f'{p.asset}: {p.allocation_pct:.0f}%' for p in summary.positions[:4])}"
             )
-            llm_tweets = cls._draft_with_anthropic(context, topic="portfolio", style=style, api_key=anthropic_api_key)
+            llm_tweets = cls._draft_with_llm(context, topic="portfolio", style=style, api_key=key, model=llm_model)
             if llm_tweets:
                 char_counts = [len(t) for t in llm_tweets]
                 preview = "\n\n---\n\n".join(f"Tweet {i+1} ({len(t)}/280 chars):\n{t}" for i, t in enumerate(llm_tweets))
@@ -294,12 +325,25 @@ class TweetDrafter:
         style: str = "single",
         topic: str = "market",
         anthropic_api_key: Optional[str] = None,
+        llm_api_key: Optional[str] = None,
+        llm_model: Optional[str] = None,
     ) -> DraftedTweet:
         """Unified dispatch method for drafting tweets."""
+        key = llm_api_key or anthropic_api_key
         if topic == "portfolio" or isinstance(brief_or_summary, PortfolioSummary):
             if isinstance(brief_or_summary, PortfolioSummary):
-                return cls.draft_portfolio_tweet(brief_or_summary, style=style, anthropic_api_key=anthropic_api_key)
+                return cls.draft_portfolio_tweet(
+                    brief_or_summary,
+                    style=style,
+                    llm_api_key=key,
+                    llm_model=llm_model,
+                )
             raise ValueError("Portfolio topic requires a PortfolioSummary object")
         else:
-            return cls.draft_market_tweet(brief_or_summary, style=style, anthropic_api_key=anthropic_api_key)
+            return cls.draft_market_tweet(
+                brief_or_summary,
+                style=style,
+                llm_api_key=key,
+                llm_model=llm_model,
+            )
 

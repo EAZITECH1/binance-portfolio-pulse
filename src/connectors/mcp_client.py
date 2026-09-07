@@ -260,6 +260,8 @@ class BinanceMCPClient:
             summary=summary,
             risk=risk,
             trends=trends,
+            llm_api_key=config.llm_api_key,
+            llm_model=config.llm_model,
             anthropic_api_key=config.anthropic_api_key,
             gemini_api_key=config.gemini_api_key,
             openai_api_key=config.openai_api_key,
@@ -377,7 +379,8 @@ class BinanceMCPClient:
                 draft = TweetDrafter.draft_portfolio_tweet(
                     summary,
                     style=style,
-                    anthropic_api_key=config.anthropic_api_key,
+                    llm_api_key=config.llm_api_key,
+                    llm_model=config.llm_model,
                 )
             else:
                 mode = "mock" if config.mode == "mock" else "api"
@@ -385,7 +388,8 @@ class BinanceMCPClient:
                 draft = TweetDrafter.draft_market_tweet(
                     brief,
                     style=style,
-                    anthropic_api_key=config.anthropic_api_key,
+                    llm_api_key=config.llm_api_key,
+                    llm_model=config.llm_model,
                 )
 
             return draft.to_dict()
