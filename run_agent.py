@@ -92,12 +92,8 @@ def generate_portfolio_report(
                     klines = mcp.call_tool("get_klines", {"symbol": sym, "limit": 7})
                     trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
                 except Exception as e:
-                    logger.warning(f"MCP ticker query failed for {sym}: {e}. Using benchmark market data.")
-                    mock = MockDataProvider()
-                    ticker = mock.get_ticker_24hr(sym)
-                    tickers[sym] = ticker
-                    klines = mock.get_klines_history(sym, limit=7)
-                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
+                    logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
+                    tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
 
         elif mode == "api":
             logger.info(f"Connecting to Binance REST API at {config.base_url}...")
@@ -135,12 +131,8 @@ def generate_portfolio_report(
                     klines = api.get_klines(sym, interval="1d", limit=7)
                     trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
                 except Exception as e:
-                    logger.warning(f"Live ticker query failed for {sym}: {e}. Using benchmark market data.")
-                    mock = MockDataProvider()
-                    ticker = mock.get_ticker_24hr(sym)
-                    tickers[sym] = ticker
-                    klines = mock.get_klines_history(sym, limit=7)
-                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
+                    logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
+                    tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
 
         else:  # 'mock'
             logger.info("Operating in Mock / Sandbox demo mode (Zero keys required).")

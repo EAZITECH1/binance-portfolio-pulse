@@ -149,15 +149,15 @@ class MockDataProvider:
         sym = symbol.upper()
         if sym in self.market_tickers:
             return self.market_tickers[sym]
-        # Generic fallback
+        # Unknown symbol fallback - never fabricate a nonzero price
         return {
             "symbol": sym,
-            "lastPrice": "10.00",
+            "lastPrice": "0.00",
             "priceChangePercent": "0.00",
-            "highPrice": "10.50",
-            "lowPrice": "9.50",
-            "volume": "1000.00",
-            "quoteVolume": "10000.00",
+            "highPrice": "0.00",
+            "lowPrice": "0.00",
+            "volume": "0.00",
+            "quoteVolume": "0.00",
         }
 
     def get_klines_history(self, symbol: str, limit: int = 7) -> List[List[Any]]:
