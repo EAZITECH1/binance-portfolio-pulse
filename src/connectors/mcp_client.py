@@ -137,13 +137,13 @@ class BinanceMCPClient:
                 },
             },
             {
-                "name": "get_onchain_snapshot",
-                "description": "Get key on-chain metrics across BNB Chain, Ethereum, Solana, DeFi TVL, and Oracle health",
+                "name": "get_price_feed_snapshot",
+                "description": "Get key market price feed metrics, network benchmarks, DeFi TVL, and Oracle health",
                 "inputSchema": {"type": "object", "properties": {}},
             },
             {
                 "name": "generate_market_brief",
-                "description": "Generate a concise, readable market intelligence update combining exchange data and on-chain pulse",
+                "description": "Generate a concise, readable market intelligence update combining exchange data and live price feed analysis",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -217,9 +217,9 @@ class BinanceMCPClient:
             watchlist = arguments.get("watchlist")
             return self.mock_provider.get_market_overview(watchlist)
 
-        elif name == "get_onchain_snapshot":
-            from .onchain_data import OnChainDataProvider
-            return OnChainDataProvider().get_onchain_snapshot()
+        elif name in ("get_price_feed_snapshot", "get_onchain_snapshot"):
+            from .price_feed_data import PriceFeedDataProvider
+            return PriceFeedDataProvider().get_price_feed_snapshot()
 
         elif name == "generate_market_brief":
             from ..analytics.market_brief import MarketBriefGenerator

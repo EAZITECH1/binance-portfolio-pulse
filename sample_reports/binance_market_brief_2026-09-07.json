@@ -1,11 +1,12 @@
 {
   "headline": "Crypto Markets Advance: SUI (+14.7%) and SOL Lead Altcoin Rally as BTC Stabilizes at $63,450",
   "sentiment": "MODERATE_RISK_ON",
+  "generated_at": "2026-09-07 17:22:24 UTC",
   "key_points": [
     "Bitcoin (BTC) is trading at $63,450.00 (+3.15%), consolidating above key support as volume holds steady.",
     "Top performers: SUI (+14.7%), SOL (+9.4%) demonstrate strong selective altcoin momentum.",
     "Laggards: ARB (-3.4%), NEAR (-7.8%) faced localized profit taking.",
-    "On-chain activity: BNB Chain recorded 4.2M daily txs with gas at 3.0 Gwei; Ethereum mainnet gas averaged 12.5 Gwei.",
+    "Market indicators: BNB Chain recorded 4.2M daily txs with gas at 3.0 Gwei; Ethereum mainnet gas averaged 12.5 Gwei.",
     "Whale flows show net outflow ($320M), pointing to continued institutional spot accumulation."
   ],
   "top_gainers": [
@@ -73,6 +74,5 @@
     "tvl_usd": "94.5B",
     "tvl_change": "+1.9%",
     "whale_signal": "NET_OUTFLOW ($320M)"
-  },
-  "generated_at": "2026-09-07 02:19:14 UTC"
+  }
 }

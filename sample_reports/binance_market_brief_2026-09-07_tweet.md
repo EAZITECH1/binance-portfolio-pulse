@@ -9,8 +9,8 @@ Here's what you need to know today 🧵👇 (1/3)
 
 ---
 
-Tweet 2 (203/280 chars):
-📊 KEY MOVERS & ON-CHAIN:
+Tweet 2 (206/280 chars):
+📊 KEY MOVERS & MARKET DATA:
 
 • $SOL: $164.80 (+9.4%)
 • $SUI: +14.7%

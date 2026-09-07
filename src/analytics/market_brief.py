@@ -1,56 +1,59 @@
 """
-Market Brief generator for Binance PortfolioPulse AI.
-Synthesizes macro market trends, top movers, and on-chain metrics into a standalone update
-independent of individual portfolio data.
+Market Intelligence Brief Generator for Binance PortfolioPulse AI.
+Synthesizes macro market trends, top movers, and market price feed metrics into a standalone update
+that does not require personal portfolio holdings.
 """
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Dict, Any, List, Optional
+from datetime import datetime, timezone
 
 from ..connectors.mock_provider import MockDataProvider
-from ..connectors.onchain_data import OnChainDataProvider
+from ..connectors.price_feed_data import PriceFeedDataProvider
 
 
-@dataclass
 class MarketBrief:
-    headline: str
-    sentiment: str
-    key_points: List[str]
-    top_gainers: List[Dict[str, Any]]
-    top_losers: List[Dict[str, Any]]
-    metrics: Dict[str, Any]
-    generated_at: str = field(default_factory=lambda: datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
+    """Encapsulates a synthesized market brief."""
+
+    def __init__(
+        self,
+        headline: str,
+        sentiment: str,
+        key_points: List[str],
+        top_gainers: List[Dict[str, Any]],
+        top_losers: List[Dict[str, Any]],
+        metrics: Dict[str, Any],
+        generated_at: Optional[str] = None,
+    ):
+        self.headline = headline
+        self.sentiment = sentiment
+        self.key_points = key_points
+        self.top_gainers = top_gainers
+        self.top_losers = top_losers
+        self.metrics = metrics
+        self.generated_at = generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "headline": self.headline,
             "sentiment": self.sentiment,
+            "generated_at": self.generated_at,
             "key_points": self.key_points,
             "top_gainers": self.top_gainers,
             "top_losers": self.top_losers,
             "metrics": self.metrics,
-            "generated_at": self.generated_at,
         }
 
     def to_markdown(self) -> str:
-        sentiment_badge = {
-            "BULLISH_EXPANSION": "🟢 **BULLISH EXPANSION**",
-            "MODERATE_RISK_ON": "↗️ **RISK-ON**",
-            "BEARISH_RETREAT": "🔴 **BEARISH RETREAT**",
-            "MILD_PULLBACK": "↘️ **PULLBACK**",
-            "NEUTRAL_CONSOLIDATION": "⚪ **CONSOLIDATION**",
-        }.get(self.sentiment, f"**{self.sentiment}**")
-
+        sentiment_emoji = "🟢" if "BULL" in self.sentiment or "RISK_ON" in self.sentiment else "🟡"
         lines = [
             f"# 🌐 Binance Agent OS - Daily Market Brief",
-            f"**Generated:** `{self.generated_at}` | **Market Sentiment:** {sentiment_badge}",
+            f"**Generated:** `{self.generated_at}` | **Market Sentiment:** {sentiment_emoji} **{self.sentiment.replace('_', '-')}**",
             "",
             f"## 📰 {self.headline}",
             "",
             "### 📌 Key Takeaways",
         ]
-        for pt in self.key_points:
-            lines.append(f"- {pt}")
+        for kp in self.key_points:
+            lines.append(f"- {kp}")
 
         lines.extend([
             "",
@@ -65,7 +68,7 @@ class MarketBrief:
 
         lines.extend([
             "",
-            "### ⛓️ On-Chain & Network Highlights",
+            "### 📊 Market Indicators & Network Activity",
             f"- **BNB Chain:** {self.metrics.get('bnb_txs', '4.2M')} daily transactions | Gas: {self.metrics.get('bnb_gas', '3.0')} Gwei",
             f"- **Ethereum:** Gas at {self.metrics.get('eth_gas', '12.5')} Gwei | 24h DEX Volume: ${self.metrics.get('eth_dex_vol', '1.85B')}",
             f"- **DeFi Total TVL:** ${self.metrics.get('tvl_usd', '94.5B')} ({self.metrics.get('tvl_change', '+1.8%')} 24h)",
@@ -78,7 +81,7 @@ class MarketBrief:
 
 
 class MarketBriefGenerator:
-    """Combines live/mock market data and on-chain feeds into a cohesive market brief."""
+    """Combines live/mock market data and price feed indicators into a cohesive market brief."""
 
     @classmethod
     def generate(
@@ -88,8 +91,8 @@ class MarketBriefGenerator:
     ) -> MarketBrief:
         mock = MockDataProvider()
         overview = mock.get_market_overview(watchlist)
-        onchain_provider = OnChainDataProvider(mode=mode)
-        onchain = onchain_provider.get_onchain_snapshot()
+        price_feed_provider = PriceFeedDataProvider(mode=mode)
+        price_feeds = price_feed_provider.get_price_feed_snapshot()
 
         assets = {a["asset"]: a for a in overview.get("assets", [])}
         top_gainers = overview.get("top_gainers", [])
@@ -118,17 +121,17 @@ class MarketBriefGenerator:
         # 2. Key Points
         gainers_str = ", ".join(f"{g['asset']} (+{g['priceChangePercent']:.1f}%)" for g in top_gainers[:2])
         losers_str = ", ".join(f"{l['asset']} ({l['priceChangePercent']:.1f}%)" for l in top_losers)
-        bnb_daily_m = onchain['bnb_chain']['daily_transactions'] / 1e6
-        bnb_gas = onchain['bnb_chain']['gas_gwei']
-        eth_gas = onchain['ethereum']['gas_gwei']
-        whale_flow_label = onchain['whale_flow']['net_exchange_flow'].lower().replace('_', ' ')
-        whale_outflow_m = onchain['whale_flow']['net_outflow_usd'] / 1e6
+        bnb_daily_m = price_feeds['bnb_chain']['daily_transactions'] / 1e6
+        bnb_gas = price_feeds['bnb_chain']['gas_gwei']
+        eth_gas = price_feeds['ethereum']['gas_gwei']
+        whale_flow_label = price_feeds['whale_flow']['net_exchange_flow'].lower().replace('_', ' ')
+        whale_outflow_m = price_feeds['whale_flow']['net_outflow_usd'] / 1e6
 
         key_points = [
             f"Bitcoin (BTC) is trading at ${btc['price']:,.2f} ({btc['priceChangePercent']:+.2f}%), consolidating above key support as volume holds steady.",
             f"Top performers: {gainers_str} demonstrate strong selective altcoin momentum.",
             f"Laggards: {losers_str} faced localized profit taking.",
-            f"On-chain activity: BNB Chain recorded {bnb_daily_m:.1f}M daily txs with gas at {bnb_gas} Gwei; Ethereum mainnet gas averaged {eth_gas} Gwei.",
+            f"Market indicators: BNB Chain recorded {bnb_daily_m:.1f}M daily txs with gas at {bnb_gas} Gwei; Ethereum mainnet gas averaged {eth_gas} Gwei.",
             f"Whale flows show {whale_flow_label} (${whale_outflow_m:.0f}M), pointing to continued institutional spot accumulation.",
         ]
 
@@ -142,13 +145,13 @@ class MarketBriefGenerator:
             "sol_change_24h": sol["priceChangePercent"],
             "top_gainer_asset": top_g["asset"],
             "top_gainer_pct": top_g["priceChangePercent"],
-            "bnb_txs": f"{onchain['bnb_chain']['daily_transactions'] / 1e6:.1f}M",
-            "bnb_gas": f"{onchain['bnb_chain']['gas_gwei']}",
-            "eth_gas": f"{onchain['ethereum']['gas_gwei']}",
-            "eth_dex_vol": f"{onchain['ethereum']['dex_volume_24h_usd'] / 1e9:.2f}B",
-            "tvl_usd": f"{onchain['defi_pulse']['total_tvl_usd'] / 1e9:.1f}B",
-            "tvl_change": f"+{onchain['defi_pulse']['tvl_24h_change_pct']:.1f}%",
-            "whale_signal": f"{onchain['whale_flow']['net_exchange_flow']} (${onchain['whale_flow']['net_outflow_usd'] / 1e6:.0f}M)",
+            "bnb_txs": f"{price_feeds['bnb_chain']['daily_transactions'] / 1e6:.1f}M",
+            "bnb_gas": f"{price_feeds['bnb_chain']['gas_gwei']}",
+            "eth_gas": f"{price_feeds['ethereum']['gas_gwei']}",
+            "eth_dex_vol": f"{price_feeds['ethereum']['dex_volume_24h_usd'] / 1e9:.2f}B",
+            "tvl_usd": f"{price_feeds['defi_pulse']['total_tvl_usd'] / 1e9:.1f}B",
+            "tvl_change": f"+{price_feeds['defi_pulse']['tvl_24h_change_pct']:.1f}%",
+            "whale_signal": f"{price_feeds['whale_flow']['net_exchange_flow']} (${price_feeds['whale_flow']['net_outflow_usd'] / 1e6:.0f}M)",
         }
 
         return MarketBrief(

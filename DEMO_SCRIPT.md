@@ -15,7 +15,7 @@
 | 00:00 - 00:12    | Title Slide & Introduction                                           |
 |                  | Web3 creator + quant use case with Binance Agent OS MCP badge.       |
 | 00:12 - 00:28    | "Give me a market update" (Market Intelligence Brief)                |
-|                  | MCP pulls top gainers (SUI, SOL) & on-chain pulse (BNB, ETH gas).    |
+|                  | MCP pulls top gainers (SUI, SOL) & price feed indicators (BNB, ETH gas). |
 | 00:28 - 00:45    | "Draft a tweet about today's market" (Viral Tweet & Thread Drafter)  |
 |                  | Generates publication-ready post (<280 chars) & 3-part thread.       |
 | 00:45 - 01:03    | Portfolio Risk Intelligence & Dark-Mode HTML Dashboard               |
@@ -31,7 +31,7 @@
 * **Visual:** Clean split-screen showing VS Code, Terminal, and the **Binance PortfolioPulse AI** logo banner.
 * **On-Screen Text Overlay:** *"Binance PortfolioPulse AI — Agent OS Market Intelligence & Content Creator"*
 * **Voiceover:**
-  > "Crypto moves 24/7. Whether you're a Web3 content creator looking to publish timely market updates or a trader tracking portfolio risk, manual analysis takes hours. Meet **Binance PortfolioPulse AI**—an autonomous agent built on Binance Agent OS that turns live exchange and on-chain data into instant market briefs, viral tweets, and risk reports."
+  > "Crypto moves 24/7. Whether you're a Web3 content creator looking to publish timely market updates or a trader tracking portfolio risk, manual analysis takes hours. Meet **Binance PortfolioPulse AI**—an autonomous agent built on Binance Agent OS that turns live exchange and market price feed data into instant market briefs, viral tweets, and risk reports."
 
 ---
 
@@ -43,10 +43,10 @@
 * **On-Screen Action:**
   Terminal streams market intelligence:
   - Top gainers: $SUI (+14.7%), $SOL (+9.4%)
-  - On-chain metrics: BNB Chain 4.2M daily txs (3.0 Gwei), Ethereum gas, DeFi TVL ($94.5B)
+  - Price feed indicators: BNB Chain 4.2M daily txs (3.0 Gwei), Ethereum gas, DeFi TVL ($94.5B)
   - Whale flow signal: $320M net exchange outflow.
 * **Voiceover:**
-  > "Ask any connected agent—like Claude or Codex—for a market update, and PortfolioPulse queries Binance Agent OS MCP and multi-chain feeds. In seconds, it synthesizes macro momentum, top movers, and on-chain activity into a structured intelligence brief."
+  > "Ask any connected agent—like Claude or Codex—for a market update, and PortfolioPulse queries Binance Agent OS MCP and market price feeds. In seconds, it synthesizes macro momentum, top movers, and network activity into a structured intelligence brief."
 
 ---
 

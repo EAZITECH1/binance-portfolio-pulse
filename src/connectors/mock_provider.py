@@ -243,8 +243,8 @@ class MockDataProvider:
             "assets": items,
         }
 
-    def get_onchain_snapshot(self) -> Dict[str, Any]:
-        """Return simulated multi-chain on-chain metrics and oracle feed data."""
+    def get_price_feed_snapshot(self) -> Dict[str, Any]:
+        """Return benchmark multi-asset market data and oracle price feed indicators."""
         return {
             "timestamp": int(time.time()),
             "bnb_chain": {
@@ -285,3 +285,6 @@ class MockDataProvider:
                 "interpretation": "Accumulation / Cold storage transfers observed across BTC and ETH.",
             },
         }
+
+    # Backward compatibility alias
+    get_onchain_snapshot = get_price_feed_snapshot

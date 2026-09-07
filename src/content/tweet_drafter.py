@@ -77,9 +77,9 @@ class TweetDrafter:
             )
             t1 = cls._truncate_if_needed(t1)
 
-            # Tweet 2: Movers & On-chain pulse
+            # Tweet 2: Movers & Market Data pulse
             t2 = (
-                f"📊 KEY MOVERS & ON-CHAIN:\n\n"
+                f"📊 KEY MOVERS & MARKET DATA:\n\n"
                 f"• $SOL: ${sol_p:,.2f} ({sol_sign}{sol_c:.1f}%)\n"
                 f"• ${top_g['asset']}: +{top_g['priceChangePercent']:.1f}%\n"
                 f"• Total DeFi TVL: ${tvl}\n"

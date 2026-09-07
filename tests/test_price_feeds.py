@@ -1,5 +1,5 @@
 """
-Unit tests for On-Chain Data Provider and expanded market overview features.
+Unit tests for Price Feed Data Provider and expanded market overview features.
 """
 import unittest
 import sys
@@ -10,19 +10,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from src.connectors.onchain_data import OnChainDataProvider
+from src.connectors.price_feed_data import PriceFeedDataProvider
 from src.connectors.mock_provider import MockDataProvider
 
 
-class TestOnChainData(unittest.TestCase):
+class TestPriceFeedData(unittest.TestCase):
 
     def setUp(self):
-        self.provider = OnChainDataProvider(mode="mock")
+        self.provider = PriceFeedDataProvider(mode="mock")
         self.mock_provider = MockDataProvider()
 
-    def test_onchain_snapshot_metrics(self):
-        """Verify onchain snapshot contains required multi-chain metrics."""
-        snapshot = self.provider.get_onchain_snapshot()
+    def test_price_feed_snapshot_metrics(self):
+        """Verify price feed snapshot contains required market and network metrics."""
+        snapshot = self.provider.get_price_feed_snapshot()
         self.assertIn("bnb_chain", snapshot)
         self.assertIn("ethereum", snapshot)
         self.assertIn("solana", snapshot)
@@ -36,6 +36,12 @@ class TestOnChainData(unittest.TestCase):
 
         # Verify DeFi TVL
         self.assertGreater(snapshot["defi_pulse"]["total_tvl_usd"], 1e10)
+
+    def test_backward_compatibility_alias(self):
+        """Verify get_onchain_snapshot backward compatibility alias works."""
+        snapshot = self.provider.get_onchain_snapshot()
+        self.assertIn("bnb_chain", snapshot)
+
 
     def test_market_overview_watchlist(self):
         """Verify get_market_overview respects watchlist and identifies top movers."""
