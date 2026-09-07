@@ -9,15 +9,15 @@ Here's what you need to know today 🧵👇 (1/3)
 
 ---
 
-Tweet 2 (206/280 chars):
-📊 KEY MOVERS & MARKET DATA:
+Tweet 2 (213/280 chars):
+📊 KEY MOVERS & BINANCE SPOT ACTIVITY:
 
 • $SOL: $164.80 (+9.4%)
 • $SUI: +14.7%
-• Total DeFi TVL: $94.5B
-• Whale flow: NET_OUTFLOW ($320M)
+• Tracked 24h Volume: $3.7B USD
+• Watchlist Avg Movement: +2.67%
 
-Institutional accumulation signals remain active across major exchanges. (2/3)
+Spot order flow shows sustained liquidity across leading pairs. (2/3)
 
 ---
 

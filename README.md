@@ -10,14 +10,14 @@
 
 Binance PortfolioPulse AI is an agentic finance and social intelligence system built for the **Binance Agent OS Mini Hackathon (Track A – Agent Creation, Data Analysis theme)**.
 
-It bridges the **Binance Model Context Protocol (MCP)** server, Exchange APIs, and market price feeds with an autonomous editorial workflow. Whenever a connected agent (Claude, Codex, Cursor, Grok) or creator asks for *"a market update"*, the agent analyzes market-wide momentum, pulls market indicators, evaluates risk vulnerabilities, and drafts ready-to-post, Cointelegraph/CoinMarketCap-style tweets and threads.
+It bridges the **Binance Model Context Protocol (MCP)** server and Binance Exchange APIs with an autonomous editorial workflow. Whenever a connected agent (Claude, Codex, Cursor, Grok) or creator asks for *"a market update"*, the agent analyzes market-wide momentum, pulls Binance market indicators, evaluates risk vulnerabilities, and drafts ready-to-post, Cointelegraph/CoinMarketCap-style tweets and threads.
 
 ---
 
 ## 🌟 Key Features
 
 - 🌐 **Market-Wide Intelligence Briefs:** Tracks top movers, volume leaders, and macro sentiment across a customizable watchlist (BTC, ETH, SOL, BNB, SUI, NEAR, AVAX, DOGE, PEPE), independent of portfolio holdings.
-- 📊 **Market Indicators & Price Feeds:** Ingests gas metrics (BNB Chain, Ethereum), 24h DEX volumes, active wallet counts, DeFi Total Value Locked (TVL), and institutional exchange flow indicators.
+- 📊 **Binance Market Indicators & Volume Tracking:** Ingests live 24h ticker metrics, tracked exchange volumes, top gainers, and market sentiment directly from Binance spot markets.
 - 🐦 **Crypto-Media Tweet & Thread Drafter:** Generates publication-ready social posts in crisp crypto-journalism style. Supports single tweets and 3-part threads, strictly adhering to Twitter/X's 280-character ceiling.
 - 🔌 **Native Binance Agent OS MCP Integration:** Implements the Model Context Protocol over HTTP/SSE (`https://agent.binance.com/mcp/agentic`) and interactive stdio for AI client pairing.
 - 🛡️ **Quantitative Portfolio Risk Engine:** Automatically detects single-asset concentration (>35%), 24h volatility anomalies (>8%), sharp pullbacks, and depleted cash buffers.
@@ -37,7 +37,7 @@ When PortfolioPulse is registered as an MCP server in **Claude Code**, **Claude 
 | *"Draft a tweet about today's crypto market"* | `draft_tweet(topic="market", style="single")` | Ready-to-post Cointelegraph-style tweet under 280 characters with stats and hashtags. |
 | *"Create a 3-part thread breaking down today's altcoin action and market data"* | `draft_tweet(topic="market", style="thread")` | Numbered 3-tweet thread (`1/3`, `2/3`, `3/3`) with hook, data, and takeaway. |
 | *"Summarize my Binance portfolio and draft a tweet about it"* | `get_account_balances()` + `draft_tweet(topic="portfolio")` | Comprehensive valuation, risk flags, and an allocation update post. |
-| *"What's the gas fee and transaction volume on BNB Chain right now?"* | `get_price_feed_snapshot()` | Real-time BNB Chain gas in Gwei, daily transactions, and DEX volume benchmarks. |
+| *"Show me top market movers and volume across the crypto watchlist"* | `get_market_overview()` | Real-time Binance spot prices, 24h gainers/losers, and aggregated quote volume. |
 
 ---
 
@@ -116,14 +116,14 @@ Selective altcoins are leading the charge today, with SUI and $SOL seeing heavy 
 Here's what you need to know today 🧵👇 (1/3)
 
 [2/3] (203/280 chars):
-📊 KEY MOVERS & MARKET DATA:
+📊 KEY MOVERS & BINANCE SPOT ACTIVITY:
 
 • $SOL: $164.80 (+9.4%)
 • $SUI: +14.7%
-• Total DeFi TVL: $94.5B
-• Whale flow: NET_OUTFLOW ($320M)
+• Tracked 24h Volume: $2.5B USD
+• Watchlist Avg Movement: +2.35%
 
-Institutional accumulation signals remain active across major exchanges. (2/3)
+Spot order flow shows sustained liquidity across leading pairs. (2/3)
 
 [3/3] (199/280 chars):
 💡 TAKEAWAY: Capital is rotating into high-beta layer-1s while BTC builds liquidity above support.
@@ -183,30 +183,29 @@ Add the following entry under `mcpServers` (replace `/ABSOLUTE/PATH/TO/binance-p
 Completely quit Claude Desktop (**Cmd + Q** on macOS or **File > Exit** on Windows) and relaunch the app.
 
 ### Step 4: Verify MCP tool discovery
-Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 8 exposed tools active and ready!
+Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 7 exposed tools active and ready!
 
 ### Step 5: Try these prompt examples in Claude Desktop
 Type any of these prompts directly into Claude:
 
 1. 💬 *"Use PortfolioPulse to give me a market update and draft a tweet about it."*
 2. 💬 *"What is my highest risk asset in PortfolioPulse?"*
-3. 💬 *"Analyze today's top gainers and price feed snapshot."*
-4. 💬 *"Create a 3-part Twitter thread breaking down today's altcoin action and gas fees."*
+3. 💬 *"Analyze today's top gainers and market overview on Binance."*
+4. 💬 *"Create a 3-part Twitter thread breaking down today's altcoin action and Binance spot volume."*
 
 ---
 
 ## 🔌 Callable MCP Tools Exposed
 
-PortfolioPulse exposes 8 high-level and granular tools conforming to the Model Context Protocol standard:
+PortfolioPulse exposes 7 high-level and granular tools conforming to the Model Context Protocol standard:
 
 1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, and market conditions.
-2. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens.
-3. `get_price_feed_snapshot()`: Pulls live network gas fees (BNB Chain, Ethereum), 24h DEX volumes, active wallets, and DeFi TVL metrics.
-4. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points).
-5. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
-6. `get_account_balances()`: Fetches spot balances and asset values.
-7. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
-8. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
+2. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens directly from Binance spot tickers.
+3. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points) from verified Binance exchange data.
+4. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
+5. `get_account_balances()`: Fetches spot balances and asset values.
+6. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
+7. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
 
 ---
 
@@ -270,10 +269,10 @@ Run the test suite with Python's built-in `unittest` runner:
 python3 -m unittest discover -s tests -v
 ```
 
-**13 unit tests covering:**
+**12 unit tests covering:**
 - Character count validation on single tweets (`<= 280` chars)
 - Thread sequence validation (`1/3`, `2/3`, `3/3`)
-- Multi-asset price feeds & gas indicator checks
+- Watchlist market overview, top movers ranking, and volume aggregation
 - Market brief synthesis independent of portfolio data
 - Portfolio valuation, asset allocation, and concentration risk thresholds
 
@@ -297,7 +296,6 @@ binance-portfolio-pulse/
 │   ├── connectors/
 │   │   ├── mcp_client.py     # Binance Agent OS MCP client & stdio bridge
 │   │   ├── binance_api.py    # Binance REST API connector with resilient SSL handling
-│   │   ├── price_feed_data.py # Multi-asset market data, gas, DEX volume, TVL, and oracle feeds
 │   │   └── mock_provider.py  # Realistic multi-asset simulation engine
 │   ├── analytics/
 │   │   ├── market_brief.py   # Macro market intelligence generator
@@ -323,7 +321,7 @@ binance-portfolio-pulse/
 │   └── sample_report.json
 └── tests/
     ├── test_content.py       # Tweet length and market brief tests
-    ├── test_price_feeds.py   # Price feed metrics and watchlist tests
+    ├── test_price_feeds.py   # Market overview, watchlist, and MCP catalog tests
     └── test_analytics.py     # Portfolio and risk engine tests
 ```
 

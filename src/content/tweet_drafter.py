@@ -128,13 +128,14 @@ class TweetDrafter:
                 )
 
         btc_p = metrics.get("btc_price", 63450.0)
-
         btc_c = metrics.get("btc_change_24h", 3.15)
         sol_p = metrics.get("sol_price", 164.80)
         sol_c = metrics.get("sol_change_24h", 9.42)
         top_g = top_gainers[0] if top_gainers else {"asset": "SUI", "priceChangePercent": 14.7}
-        tvl = metrics.get("tvl_usd", "94.5B")
-        whale = metrics.get("whale_signal", "NET OUTFLOW ($320M)")
+        vol = metrics.get("total_tracked_volume_usd", 0.0)
+        vol_str = f"${vol/1e9:.1f}B" if vol >= 1e9 else f"${vol/1e6:.0f}M" if vol >= 1e6 else f"${vol:,.0f}"
+        avg_move = metrics.get("average_24h_change_pct", 0.0)
+        avg_sign = "+" if avg_move >= 0 else ""
 
         btc_sign = "+" if btc_c >= 0 else ""
         sol_sign = "+" if sol_c >= 0 else ""
@@ -150,14 +151,14 @@ class TweetDrafter:
             )
             t1 = cls._truncate_if_needed(t1)
 
-            # Tweet 2: Movers & Market Data pulse
+            # Tweet 2: Movers & Binance Spot Activity
             t2 = (
-                f"📊 KEY MOVERS & MARKET DATA:\n\n"
+                f"📊 KEY MOVERS & BINANCE SPOT ACTIVITY:\n\n"
                 f"• $SOL: ${sol_p:,.2f} ({sol_sign}{sol_c:.1f}%)\n"
                 f"• ${top_g['asset']}: +{top_g['priceChangePercent']:.1f}%\n"
-                f"• Total DeFi TVL: ${tvl}\n"
-                f"• Whale flow: {whale}\n\n"
-                f"Institutional accumulation signals remain active across major exchanges. (2/3)"
+                f"• Tracked 24h Volume: {vol_str} USD\n"
+                f"• Watchlist Avg Movement: {avg_sign}{avg_move:.2f}%\n\n"
+                f"Spot order flow shows sustained liquidity across leading pairs. (2/3)"
             )
             t2 = cls._truncate_if_needed(t2)
 
@@ -178,7 +179,7 @@ class TweetDrafter:
                 f"as altcoin momentum accelerates.\n\n"
                 f"Top runners: ${top_g['asset']} (+{top_g['priceChangePercent']:.1f}%) & "
                 f"$SOL ${sol_p:,.2f} ({sol_sign}{sol_c:.1f}%).\n"
-                f"DeFi TVL holds at ${tvl} with exchange outflows pointing to accumulation.\n\n"
+                f"Tracked 24h volume tops {vol_str} on Binance spot.\n\n"
                 f"#Bitcoin #Crypto #Binance"
             )
             tweets = [cls._truncate_if_needed(single)]

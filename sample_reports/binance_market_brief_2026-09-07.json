@@ -1,13 +1,13 @@
 {
-  "headline": "Crypto Markets Advance: SUI (+14.7%) and SOL Lead Altcoin Rally as BTC Stabilizes at $63,450",
+  "headline": "Crypto Markets Advance: SUI (+14.7%) and Altcoins Rally as BTC Holds $63,450",
   "sentiment": "MODERATE_RISK_ON",
-  "generated_at": "2026-09-07 17:22:24 UTC",
+  "generated_at": "2026-09-07 19:07:31 UTC",
   "key_points": [
-    "Bitcoin (BTC) is trading at $63,450.00 (+3.15%), consolidating above key support as volume holds steady.",
-    "Top performers: SUI (+14.7%), SOL (+9.4%) demonstrate strong selective altcoin momentum.",
-    "Laggards: ARB (-3.4%), NEAR (-7.8%) faced localized profit taking.",
-    "Market indicators: BNB Chain recorded 4.2M daily txs with gas at 3.0 Gwei; Ethereum mainnet gas averaged 12.5 Gwei.",
-    "Whale flows show net outflow ($320M), pointing to continued institutional spot accumulation."
+    "Bitcoin (BTC) is trading at $63,450.00 (+3.15%), consolidating with 24h volume of $1,785,000,000.",
+    "Top performers: SUI (+14.7%), SOL (+9.4%) demonstrate strong selective momentum across Binance spot markets.",
+    "Laggards: ARB (-3.4%), NEAR (-7.8%) experienced localized pullback.",
+    "Binance 24h tracked exchange volume stands at $3,652,155,000 USD across active pairs.",
+    "Market sentiment index sits at MODERATE RISK ON with an average 24h asset return of +2.67%."
   ],
   "top_gainers": [
     {
@@ -67,12 +67,7 @@
     "sol_change_24h": 9.42,
     "top_gainer_asset": "SUI",
     "top_gainer_pct": 14.65,
-    "bnb_txs": "4.2M",
-    "bnb_gas": "3.0",
-    "eth_gas": "12.5",
-    "eth_dex_vol": "1.85B",
-    "tvl_usd": "94.5B",
-    "tvl_change": "+1.9%",
-    "whale_signal": "NET_OUTFLOW ($320M)"
+    "total_tracked_volume_usd": 3652155000.0,
+    "average_24h_change_pct": 2.67
   }
 }

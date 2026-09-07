@@ -138,13 +138,8 @@ class BinanceMCPClient:
                 },
             },
             {
-                "name": "get_price_feed_snapshot",
-                "description": "Get key market price feed metrics, network benchmarks, DeFi TVL, and Oracle health",
-                "inputSchema": {"type": "object", "properties": {}},
-            },
-            {
                 "name": "generate_market_brief",
-                "description": "Generate a concise, readable market intelligence update combining exchange data and live price feed analysis",
+                "description": "Generate a concise, readable market intelligence update using verified Binance exchange data",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -344,12 +339,6 @@ class BinanceMCPClient:
             if config.mode == "mock":
                 return self.mock_provider.get_market_overview(watchlist)
             return self.api_client.get_market_overview(watchlist)
-
-        elif name in ("get_price_feed_snapshot", "get_onchain_snapshot"):
-            from .price_feed_data import PriceFeedDataProvider
-            from ..config import config
-            mode = "mock" if config.mode == "mock" else "live"
-            return PriceFeedDataProvider(mode=mode).get_price_feed_snapshot()
 
         elif name == "generate_market_brief":
             from ..analytics.market_brief import MarketBriefGenerator

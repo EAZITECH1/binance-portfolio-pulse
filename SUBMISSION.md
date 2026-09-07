@@ -10,7 +10,7 @@
 
 > 🚀 Excited to submit **Binance PortfolioPulse AI** for the @Binance Agent OS Mini Hackathon (Track A – Data Analysis)!
 > 
-> PortfolioPulse is an autonomous market intelligence & content creation agent powered by Binance Agent OS MCP. Connected AI agents (Claude, Codex, Cursor) can ask for "a market update" or "draft a tweet" to pull live exchange + market price feed metrics, detect portfolio risk flags, and generate publication-ready, Cointelegraph-style tweets & threads (<280 chars) plus full dark-mode HTML dashboards. Built for Web3 creators and quants—secure, cron-ready, and zero-key testable! 🤖📊🟡🐦
+> PortfolioPulse is an autonomous market intelligence & content creation agent powered by Binance Agent OS MCP. Connected AI agents (Claude, Codex, Cursor) can ask for "a market update" or "draft a tweet" to pull live exchange data, detect portfolio risk flags, and generate publication-ready, Cointelegraph-style tweets & threads (<280 chars) plus full dark-mode HTML dashboards. Built for Web3 creators and quants—secure, cron-ready, and zero-key testable! 🤖📊🟡🐦
 > 
 > 🔗 GitHub: [https://github.com/EAZITECH1/binance-portfolio-pulse](https://github.com/EAZITECH1/binance-portfolio-pulse)  
 > #Binance #AgentOS #BuildOnBinance #AIagents #MCP #CryptoAnalytics #Web3
@@ -25,13 +25,13 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 
 1. **Native Binance Agent OS MCP Integration & Dual Usage Modes:**
    - Implements full client connectivity to the official Binance MCP Server endpoint (`https://agent.binance.com/mcp/agentic`) and interactive local stdio server.
-   - Exposes 8 MCP tools: `ask_portfoliopulse`, `get_market_overview`, `get_price_feed_snapshot`, `generate_market_brief`, `draft_tweet`, `get_account_balances`, `get_ticker_24hr`, and `get_klines`.
+   - Exposes 7 MCP tools: `ask_portfoliopulse`, `get_market_overview`, `generate_market_brief`, `draft_tweet`, `get_account_balances`, `get_ticker_24hr`, and `get_klines`.
    - Verified live in Claude Desktop, Claude Code, Cursor, and Codex workflows via `mcp_config.json`.
    - Strictly non-custodial with zero external withdrawal scope.
 
-2. **Market Intelligence & Price Feed Analysis:**
-   - Standalone market briefs tracking top movers (BTC, ETH, SOL, BNB, SUI, AVAX, DOGE, PEPE), 24h quote volumes, and sentiment.
-   - Market indicators and price feeds across BNB Chain, Ethereum, and Solana (gas in Gwei, DEX volume, daily tx benchmarks, DeFi TVL, and institutional exchange flow signals).
+2. **Verified Binance Market Intelligence:**
+   - Standalone market briefs tracking top movers (BTC, ETH, SOL, BNB, SUI, AVAX, DOGE, PEPE), 24h spot volumes, and market sentiment.
+   - Real-time exchange indicators across Binance spot markets (tracked USD volume, 24h price changes, and top gainer/loser rankings).
 
 3. **Web3 Content Creator Social Drafter:**
    - Transforms complex raw data into publication-ready tweets and 3-part threads in crypto-journalism style (Cointelegraph / CoinMarketCap).
@@ -43,7 +43,7 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 
 5. **Zero-Key Judge Experience:**
    - Reviewers can clone the repository and immediately execute `python3 run_agent.py --brief market --draft-tweet` or `python3 run_agent.py --brief portfolio --format all` without configuring API keys.
-   - Resilient offline/sandboxed fallback with comprehensive test suite (13/13 passing).
+   - Resilient offline/sandboxed fallback with comprehensive test suite (12/12 passing).
 
 ---
 
@@ -53,5 +53,5 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 - [x] Comprehensive `README.md` with setup, MCP auth walkthrough, and natural language prompt catalog
 - [x] Sample generated market briefs, drafted tweets, and HTML dashboards in `sample_reports/`
 - [x] 60–90 second demo video script & storyboard (`DEMO_SCRIPT.md`)
-- [x] Automated test suite passing 100% (13/13 unit tests across `test_analytics.py`, `test_content.py`, `test_price_feeds.py`)
+- [x] Automated test suite passing 100% (12/12 unit tests across `test_analytics.py`, `test_content.py`, `test_price_feeds.py`)
 - [x] Open-source MIT License (`LICENSE`)

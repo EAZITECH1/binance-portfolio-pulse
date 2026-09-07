@@ -51,10 +51,10 @@
   [INFO] Initializing Binance Agent OS MCP client...
   [INFO] Connected to Binance MCP server: https://agent.binance.com/mcp/agentic
   [INFO] Invoking MCP tool: get_account_balances() -> Received 4 active spot balances
-  [INFO] Invoking MCP tool: get_ticker_24hr() & price_feed_snapshot()
+  [INFO] Invoking MCP tool: get_ticker_24hr() & get_market_overview()
   [INFO] Valuation complete: Total Portfolio Value $71,980.53 | 24h P&L: +$1,464.58 (+2.08%)
   ```
-* **Caption Cue:** `[Live MCP data pull: Real account balances & market feeds ingested via Binance Agent OS]`
+* **Caption Cue:** `[Live MCP data pull: Real account balances & market tickers ingested via Binance Agent OS]`
 * **Voiceover:**
   > "Watch what happens when we run in MCP mode. Connecting via Binance Agent OS MCP, the agent directly invokes live protocol tools—retrieving real spot balances and live market feeds. There are no static hardcoded numbers or insecure local secrets here: live data streams straight into the agent's analytics pipeline."
 
@@ -77,7 +77,7 @@
 * **Visual:** Scroll to the **Structured Intelligence Brief** section in the report dashboard.
 * **On-Screen Text Layout:**
   - **1. What Happened:** Portfolio rose +2.1% (+$1,464.58), driven primarily by a +9.4% move in Solana.
-  - **2. What to Watch:** BNB Chain gas at 3.0 Gwei with 4.2M daily transactions; institutional whale outflow of $320M signals exchange supply contraction.
+  - **2. What to Watch:** Tracked Binance 24h volume tops $2.5B USD; selective altcoins showing strong momentum against Bitcoin consolidation.
   - **3. Key Risks & Actionable Next Steps:** Rebalance 10% of BTC into stablecoins to restore cash buffers and mitigate downside slippage.
 * **Caption Cue:** `[Structured Brief: "What Happened / What to Watch / Risks" institutional synthesis]`
 * **Voiceover:**
@@ -94,7 +94,7 @@
   Terminal displays the drafted tweet under 280 characters with stats, hashtags, and character count verification (`[223/280 chars]`). Final screen shows GitHub repository URL.
 * **Caption Cue:** `[Bonus Feature: 1-click Cointelegraph-style tweet draft (<280 chars) generated from brief]`
 * **Voiceover:**
-  > "As an editorial bonus for Web3 creators, the agent can also call `draft_tweet()` to compress that verified brief into a publication-ready post strictly under 280 characters. 8 MCP tools, 100% test coverage, and completely open source. Build with Binance PortfolioPulse on GitHub!"
+  > "As an editorial bonus for Web3 creators, the agent can also call `draft_tweet()` to compress that verified brief into a publication-ready post strictly under 280 characters. 7 MCP tools, 100% test coverage, and completely open source. Build with Binance PortfolioPulse on GitHub!"
 
 ---
 
