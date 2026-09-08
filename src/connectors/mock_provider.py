@@ -144,21 +144,12 @@ class MockDataProvider:
             for item in self.holdings
         ]
 
-    def get_ticker_24hr(self, symbol: str) -> Dict[str, Any]:
-        """Return simulated 24h ticker for a symbol."""
+    def get_ticker_24hr(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Return simulated 24h ticker for a symbol, or None if symbol is not tracked."""
         sym = symbol.upper()
         if sym in self.market_tickers:
             return self.market_tickers[sym]
-        # Unknown symbol fallback - never fabricate a nonzero price
-        return {
-            "symbol": sym,
-            "lastPrice": "0.00",
-            "priceChangePercent": "0.00",
-            "highPrice": "0.00",
-            "lowPrice": "0.00",
-            "volume": "0.00",
-            "quoteVolume": "0.00",
-        }
+        return None
 
     def get_klines_history(self, symbol: str, limit: int = 7) -> List[List[Any]]:
         """Return simulated 7-day daily candlestick (kline) data."""
@@ -167,12 +158,13 @@ class MockDataProvider:
         now_ms = int(time.time() * 1000)
         day_ms = 86400 * 1000
         
-        last_price = float(self.get_ticker_24hr(symbol).get("lastPrice", 100.0))
-        pct_change = float(self.get_ticker_24hr(symbol).get("priceChangePercent", 0.0))
+        t = self.get_ticker_24hr(symbol) or {}
+        last_price = float(t.get("lastPrice", 100.0))
+        pct_change = float(t.get("priceChangePercent", 0.0))
         
         # Build 7-day trend backwards
         klines = []
-        base_price = last_price / (1.0 + (pct_change / 100.0))
+        base_price = last_price / (1.0 + (pct_change / 100.0)) if last_price > 0 else 100.0
         for i in range(limit - 1, -1, -1):
             t_open = now_ms - (i * day_ms)
             # Slight synthetic drift
@@ -190,6 +182,7 @@ class MockDataProvider:
         """
         Return comprehensive market overview across a watchlist of assets.
         Calculates top gainers, top losers, total volume, and sentiment.
+        Drops unknown symbols that are not in the mock catalog.
         """
         if not watchlist:
             watchlist = ["BTC", "ETH", "SOL", "BNB", "SUI", "NEAR", "AVAX", "PEPE", "DOGE", "LINK", "ARB"]
@@ -200,7 +193,11 @@ class MockDataProvider:
         for asset in watchlist:
             sym = f"{asset.upper()}USDT"
             t = self.get_ticker_24hr(sym)
+            if not t:
+                continue
             price = float(t.get("lastPrice", 0.0))
+            if price <= 0:
+                continue
             change_pct = float(t.get("priceChangePercent", 0.0))
             quote_vol = float(t.get("quoteVolume", 0.0))
             total_vol_usd += quote_vol
@@ -217,8 +214,8 @@ class MockDataProvider:
 
         # Rank by performance
         sorted_by_change = sorted(items, key=lambda x: x["priceChangePercent"], reverse=True)
-        top_gainers = sorted_by_change[:3]
-        top_losers = sorted_by_change[-2:]
+        top_gainers = sorted_by_change[:3] if sorted_by_change else []
+        top_losers = sorted_by_change[-2:] if len(sorted_by_change) >= 2 else []
 
         # Classify market sentiment
         avg_change = sum(x["priceChangePercent"] for x in items) / len(items) if items else 0.0

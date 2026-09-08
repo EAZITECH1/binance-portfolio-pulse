@@ -69,16 +69,7 @@ class BinanceMCPClient:
         )
 
         try:
-            import ssl
-            try:
-                resp_ctx = urllib.request.urlopen(req, timeout=8, context=self.ssl_context)
-            except urllib.error.URLError as ssl_err:
-                if "CERTIFICATE_VERIFY_FAILED" in str(ssl_err):
-                    resp_ctx = urllib.request.urlopen(req, timeout=8, context=ssl._create_unverified_context())
-                else:
-                    raise ssl_err
-
-            with resp_ctx as resp:
+            with urllib.request.urlopen(req, timeout=8, context=self.ssl_context) as resp:
                 resp_text = resp.read().decode("utf-8")
                 return json.loads(resp_text)
         except (urllib.error.HTTPError, urllib.error.URLError, Exception) as e:
@@ -90,9 +81,11 @@ class BinanceMCPClient:
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """List available tools exposed by the Binance MCP server."""
-        resp = self.send_mcp_request("tools/list")
-        if "result" in resp and "tools" in resp["result"]:
-            return resp["result"]["tools"]
+        from ..config import config
+        if config.mode != "mock" and self.auth_token:
+            resp = self.send_mcp_request("tools/list")
+            if "result" in resp and "tools" in resp["result"]:
+                return resp["result"]["tools"]
 
         # Default standard Binance Agent OS Tool Catalog
         return [
@@ -103,11 +96,13 @@ class BinanceMCPClient:
             },
             {
                 "name": "get_ticker_24hr",
-                "description": "Get 24-hour price change and volume statistics for a crypto pair",
+                "description": "Get 24-hour price change and volume statistics for a crypto pair or batch of pairs",
                 "inputSchema": {
                     "type": "object",
-                    "properties": {"symbol": {"type": "string", "description": "e.g. BTCUSDT"}},
-                    "required": ["symbol"],
+                    "properties": {
+                        "symbol": {"type": "string", "description": "e.g. BTCUSDT"},
+                        "symbols": {"type": "array", "items": {"type": "string"}, "description": "Batch of symbols e.g. ['BTCUSDT', 'ETHUSDT']"}
+                    },
                 },
             },
             {
@@ -214,26 +209,52 @@ class BinanceMCPClient:
         use_live = (mode == "api") or (mode != "mock" and bool(self.api_client.api_key))
 
         # Ingest balances & tickers
+        raw = []
         if use_live:
-            try:
-                raw = self.api_client.get_account_balances()
-            except Exception as e:
-                logger.warning(f"Error fetching live balances: {e}")
-                raw = []
+            if self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw = self.api_client.get_account_balances()
+                except Exception as e:
+                    logger.warning(f"Error fetching live balances: {e}. Using demonstration portfolio.")
+                    raw = self.mock_provider.get_account_balances()
+            else:
+                logger.info("No API keys configured. Using demonstration portfolio with market data.")
+                raw = self.mock_provider.get_account_balances()
+
             tickers = {}
             trends = {}
+            non_stables = [
+                item.get("asset", "").upper()
+                for item in raw
+                if item.get("asset", "").upper() not in ("USDT", "USDC", "FDUSD")
+            ]
+            symbols_to_fetch = [f"{a}USDT" for a in non_stables]
+            batch_tickers = {}
+            if self.api_client:
+                try:
+                    batch_res = self.api_client.get_tickers_batch(symbols_to_fetch)
+                    batch_tickers = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
+                except Exception:
+                    batch_tickers = {}
+
             for item in raw:
                 asset = item.get("asset", "").upper()
                 if asset in ("USDT", "USDC", "FDUSD"):
                     continue
                 sym = f"{asset}USDT"
-                try:
-                    t = self.api_client.get_ticker_24hr(sym)
+                t = batch_tickers.get(sym)
+                if not t:
+                    try:
+                        t = self.api_client.get_ticker_24hr(sym)
+                    except Exception:
+                        t = self.mock_provider.get_ticker_24hr(sym)
+                if t:
                     tickers[sym] = t
-                    k = self.api_client.get_klines(sym, interval="1d", limit=7)
+                    try:
+                        k = self.api_client.get_klines(sym, interval="1d", limit=7)
+                    except Exception:
+                        k = self.mock_provider.get_klines_history(sym, limit=7)
                     trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
-                except Exception:
-                    tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
         else:
             raw = self.mock_provider.get_account_balances()
             tickers = {}
@@ -244,9 +265,10 @@ class BinanceMCPClient:
                     continue
                 sym = f"{asset}USDT"
                 t = self.mock_provider.get_ticker_24hr(sym)
-                tickers[sym] = t
-                k = self.mock_provider.get_klines_history(sym, limit=7)
-                trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
+                if t:
+                    tickers[sym] = t
+                    k = self.mock_provider.get_klines_history(sym, limit=7)
+                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
 
         summary = PortfolioAnalyzer.analyze(raw, tickers)
         risk = RiskAnalyzer.evaluate(
@@ -312,18 +334,37 @@ class BinanceMCPClient:
             return []
 
         elif name == "get_ticker_24hr":
-            sym = arguments.get("symbol", "BTCUSDT")
-            if self.fallback_to_api:
+            from ..config import config
+            symbols = arguments.get("symbols")
+            if symbols and isinstance(symbols, list):
+                if config.mode == "mock":
+                    return [self.mock_provider.get_ticker_24hr(s) for s in symbols if self.mock_provider.get_ticker_24hr(s)]
+                if self.fallback_to_api and self.api_client:
+                    try:
+                        return self.api_client.get_tickers_batch(symbols)
+                    except Exception:
+                        pass
+                return [self.mock_provider.get_ticker_24hr(s) for s in symbols if self.mock_provider.get_ticker_24hr(s)]
+
+            sym = (arguments.get("symbol") or "BTCUSDT").upper()
+            if config.mode == "mock":
+                t = self.mock_provider.get_ticker_24hr(sym)
+                return t if t is not None else {"error": f"Symbol '{sym}' not found in mock catalog"}
+            if self.fallback_to_api and self.api_client:
                 try:
                     return self.api_client.get_ticker_24hr(sym)
                 except Exception:
                     pass
-            return self.mock_provider.get_ticker_24hr(sym)
+            t = self.mock_provider.get_ticker_24hr(sym)
+            return t if t is not None else {"error": f"Symbol '{sym}' not found in mock catalog"}
 
         elif name == "get_klines":
             sym = arguments.get("symbol", "BTCUSDT")
             limit = arguments.get("limit", 7)
-            if self.fallback_to_api:
+            from ..config import config
+            if config.mode == "mock":
+                return self.mock_provider.get_klines_history(sym, limit=limit)
+            if self.fallback_to_api and self.api_client:
                 try:
                     return self.api_client.get_klines(sym, limit=limit)
                 except Exception:
@@ -332,15 +373,15 @@ class BinanceMCPClient:
 
         elif name == "get_market_overview":
             watchlist = arguments.get("watchlist")
-            if self.fallback_to_api:
+            from ..config import config
+            if config.mode == "mock":
+                return self.mock_provider.get_market_overview(watchlist)
+            if self.fallback_to_api and self.api_client:
                 try:
                     return self.api_client.get_market_overview(watchlist)
                 except Exception as e:
                     logger.warning(f"Live market overview query failed: {e}")
-            from ..config import config
-            if config.mode == "mock":
-                return self.mock_provider.get_market_overview(watchlist)
-            return self.api_client.get_market_overview(watchlist)
+            return self.mock_provider.get_market_overview(watchlist)
 
         elif name == "generate_market_brief":
             from ..analytics.market_brief import MarketBriefGenerator

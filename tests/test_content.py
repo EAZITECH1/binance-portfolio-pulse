@@ -85,6 +85,7 @@ class TestContentAndMarketBrief(unittest.TestCase):
         for i, t in enumerate(draft.tweets):
             self.assertLessEqual(len(t), 280)
             self.assertIn(f"({i+1}/3)", t)
+        self.assertIn("$SOL", draft.tweets[2])
 
 
 if __name__ == "__main__":

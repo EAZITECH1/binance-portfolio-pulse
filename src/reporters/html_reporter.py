@@ -3,7 +3,7 @@ Interactive HTML Dashboard Reporter for Binance PortfolioPulse AI.
 Renders a sleek, responsive, dark-mode fintech report inspired by Binance Agent OS.
 Standalone and zero-dependency: requires no external CDNs or JavaScript frameworks.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from ..analytics.portfolio import PortfolioSummary
@@ -34,7 +34,7 @@ class HTMLReporter:
         ai_summary: PlainLanguageSummary,
         source_mode: str = "Binance Agent OS (MCP)",
     ) -> str:
-        now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         pnl_symbol = "+" if summary.total_24h_pnl_usd >= 0 else "-"
         pnl_class = "green" if summary.total_24h_pnl_usd >= 0 else "red"
         abs_pnl_usd = abs(summary.total_24h_pnl_usd)

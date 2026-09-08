@@ -34,13 +34,26 @@ class TestMarketOverview(unittest.TestCase):
 
     def test_mcp_client_tools_list_has_no_non_binance_tools(self):
         """Verify get_price_feed_snapshot is not present in MCP tool definitions."""
-        tools = self.mcp_client.list_tools()
+        from unittest.mock import patch
+        with patch.object(self.mcp_client, "send_mcp_request", return_value={}):
+            tools = self.mcp_client.list_tools()
         tool_names = [t["name"] for t in tools]
         self.assertNotIn("get_price_feed_snapshot", tool_names)
         self.assertNotIn("get_onchain_snapshot", tool_names)
         self.assertIn("get_market_overview", tool_names)
         self.assertIn("generate_market_brief", tool_names)
         self.assertEqual(len(tools), 7)
+
+    def test_market_overview_drops_unknown_symbols(self):
+        """Verify unknown or unlisted tokens like FAKECOIN are dropped and not fabricated as top gainers."""
+        watchlist = ["BTC", "FAKECOIN", "ETH"]
+        overview = self.mock_provider.get_market_overview(watchlist)
+        asset_names = [a["asset"] for a in overview["assets"]]
+        self.assertIn("BTC", asset_names)
+        self.assertIn("ETH", asset_names)
+        self.assertNotIn("FAKECOIN", asset_names)
+        gainer_assets = [g["asset"] for g in overview["top_gainers"]]
+        self.assertNotIn("FAKECOIN", gainer_assets)
 
 
 if __name__ == "__main__":

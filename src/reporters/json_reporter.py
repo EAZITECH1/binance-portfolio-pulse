@@ -3,7 +3,7 @@ Structured JSON report generator for Binance PortfolioPulse AI.
 Provides clean machine-readable data payloads for downstream pipelines and bots.
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from ..analytics.portfolio import PortfolioSummary
@@ -26,7 +26,7 @@ class JSONReporter:
     ) -> str:
         payload = {
             "metadata": {
-                "generated_at": datetime.utcnow().isoformat() + "Z",
+                "generated_at": datetime.now(timezone.utc).isoformat(),
                 "source_mode": source_mode,
                 "agent_name": "Binance PortfolioPulse AI",
                 "version": "1.0.0",

@@ -18,17 +18,19 @@ import ssl
 
 
 def get_ssl_context() -> ssl.SSLContext:
-    """Returns a valid SSL context, with graceful fallback on macOS system Python."""
+    """Returns a secure SSL context validating against CA certificates."""
     try:
         import certifi
         return ssl.create_default_context(cafile=certifi.where())
     except Exception:
         pass
     try:
-        ctx = ssl.create_default_context()
-        return ctx
-    except Exception:
-        return ssl._create_unverified_context()
+        return ssl.create_default_context()
+    except Exception as e:
+        raise ssl.SSLError(
+            f"Unable to create secure SSL context: {e}. "
+            "Please install certifi ('pip install certifi') or run macOS 'Install Certificates.command'."
+        )
 
 
 class BinanceAPIClient:
@@ -98,20 +100,21 @@ class BinanceAPIClient:
             req = urllib.request.Request(url, headers=headers, method=method)
 
             try:
-                import ssl
-                try:
-                    resp_context = urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_context)
-                except urllib.error.URLError as ssl_err:
-                    if "CERTIFICATE_VERIFY_FAILED" in str(ssl_err):
-                        fallback_ctx = ssl._create_unverified_context()
-                        resp_context = urllib.request.urlopen(req, timeout=self.timeout, context=fallback_ctx)
-                    else:
-                        raise ssl_err
-
-                with resp_context as response:
+                with urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_context) as response:
                     body = response.read().decode("utf-8")
                     return json.loads(body)
-            except (urllib.error.HTTPError, urllib.error.URLError, Exception) as e:
+            except urllib.error.URLError as e:
+                if "CERTIFICATE_VERIFY_FAILED" in str(e):
+                    logger.error(
+                        f"SSL certificate verification failed connecting to {base}: {e}. "
+                        "To protect your credentials, unverified connections are disallowed. "
+                        "Please run 'pip install certifi' or install macOS root certificates."
+                    )
+                    raise
+                last_error = e
+                logger.debug(f"Request to {base}{path} failed: {e}. Trying next Binance endpoint...")
+                continue
+            except (urllib.error.HTTPError, Exception) as e:
                 last_error = e
                 logger.debug(f"Request to {base}{path} failed: {e}. Trying next Binance endpoint...")
                 continue
@@ -141,6 +144,29 @@ class BinanceAPIClient:
         """Fetch 24-hour rolling window price change statistics for a symbol."""
         symbol = symbol.upper()
         return self._request("GET", "/api/v3/ticker/24hr", {"symbol": symbol})
+
+    def get_tickers_batch(self, symbols: List[str]) -> List[Dict[str, Any]]:
+        """
+        Fetch 24-hour price change statistics for multiple symbols in a single HTTP request.
+        Uses Binance GET /api/v3/ticker/24hr?symbols=[...]
+        """
+        if not symbols:
+            return []
+        try:
+            symbols_param = json.dumps([s.upper() for s in symbols], separators=(",", ":"))
+            data = self._request("GET", "/api/v3/ticker/24hr", {"symbols": symbols_param})
+            if isinstance(data, list):
+                return data
+        except Exception as e:
+            logger.warning(f"Batch ticker query failed ({e}), falling back to per-symbol queries.")
+            results = []
+            for s in symbols:
+                try:
+                    results.append(self.get_ticker_24hr(s))
+                except Exception:
+                    pass
+            return results
+        return []
 
     def get_all_tickers_24hr(self) -> List[Dict[str, Any]]:
         """Fetch 24-hour price change statistics for all trading pairs."""

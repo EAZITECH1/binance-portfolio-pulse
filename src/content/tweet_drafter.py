@@ -155,59 +155,81 @@ class TweetDrafter:
                     formatted_preview=preview,
                 )
 
+        sentiment = b_dict.get("sentiment", "NEUTRAL_CONSOLIDATION")
         btc_p = metrics.get("btc_price", 63450.0)
         btc_c = metrics.get("btc_change_24h", 3.15)
-        sol_p = metrics.get("sol_price", 164.80)
-        sol_c = metrics.get("sol_change_24h", 9.42)
-        top_g = top_gainers[0] if top_gainers else {"asset": "SUI", "priceChangePercent": 14.7}
         vol = metrics.get("total_tracked_volume_usd", 0.0)
         vol_str = f"${vol/1e9:.1f}B" if vol >= 1e9 else f"${vol/1e6:.0f}M" if vol >= 1e6 else f"${vol:,.0f}"
         avg_move = metrics.get("average_24h_change_pct", 0.0)
         avg_sign = "+" if avg_move >= 0 else ""
-
         btc_sign = "+" if btc_c >= 0 else ""
-        sol_sign = "+" if sol_c >= 0 else ""
+
+        # Find actual positive performers rather than hardcoding any specific token
+        pos_movers = [g for g in top_gainers if g.get("priceChangePercent", 0) > 0]
+        if len(pos_movers) >= 2:
+            r1, r2 = pos_movers[0], pos_movers[1]
+            runners_str = f"${r1['asset']} (+{r1['priceChangePercent']:.1f}%) & ${r2['asset']} (+{r2['priceChangePercent']:.1f}%)"
+            movers_lines = f"• ${r1['asset']}: +{r1['priceChangePercent']:.1f}%\n• ${r2['asset']}: +{r2['priceChangePercent']:.1f}%"
+        elif len(pos_movers) == 1:
+            r1 = pos_movers[0]
+            runners_str = f"${r1['asset']} (+{r1['priceChangePercent']:.1f}%)"
+            movers_lines = f"• ${r1['asset']}: +{r1['priceChangePercent']:.1f}%\n• $BTC: ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%)"
+        else:
+            top_asset = top_gainers[0] if top_gainers else {"asset": "BTC", "priceChangePercent": btc_c}
+            runners_str = f"${top_asset['asset']} ({top_asset['priceChangePercent']:+.1f}%)"
+            movers_lines = f"• $BTC: ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%)"
+
+        # Dynamically tailor hook and takeaway to real market sentiment
+        is_bullish = btc_c >= 1.0 or "BULL" in sentiment or sentiment == "MODERATE_RISK_ON"
+        is_bearish = btc_c <= -1.0 or "BEAR" in sentiment or "PULLBACK" in sentiment
+
+        if is_bullish:
+            t1_hook = f"🚨 MARKET PULSE: Crypto pushes higher as Bitcoin holds ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
+            t1_sub = f"Selective altcoins are leading the charge, with {runners_str} seeing spot demand.\n\n"
+            t3_takeaway = "💡 TAKEAWAY: Capital rotating into high-momentum spot pairs while BTC defends support."
+            single_lead = f"⚡ MARKET UPDATE: Bitcoin advances to ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) with momentum building.\n\n"
+        elif is_bearish:
+            t1_hook = f"🚨 MARKET PULSE: Crypto faces pullback as Bitcoin tests ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
+            t1_sub = f"Caution across majors today, though {runners_str} displays resilience.\n\n" if pos_movers else "Broad market caution prevails as traders de-risk into stablecoin buffers.\n\n"
+            t3_takeaway = "💡 TAKEAWAY: Defensive posture across desks as participants monitor BTC range support."
+            single_lead = f"⚡ MARKET UPDATE: Bitcoin cools to ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) amid localized pullback.\n\n"
+        else:
+            t1_hook = f"🚨 MARKET PULSE: Crypto consolidates with Bitcoin steady near ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
+            t1_sub = f"Range-bound action dominates today, while {runners_str} highlights selective rotation.\n\n"
+            t3_takeaway = "💡 TAKEAWAY: Selective rotation underway as traders await directional macro breakout."
+            single_lead = f"⚡ MARKET UPDATE: Bitcoin ranges at ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) in consolidating markets.\n\n"
 
         if style == "thread":
-            # Tweet 1: Hook + Lead stats
             t1 = (
-                f"🚨 MARKET PULSE: Crypto pushes higher as Bitcoin holds steady "
-                f"above ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
-                f"Selective altcoins are leading the charge today, with {top_g['asset']} "
-                f"and $SOL seeing heavy spot inflows.\n\n"
+                f"{t1_hook}"
+                f"{t1_sub}"
                 f"Here's what you need to know today 🧵👇 (1/3)"
             )
             t1 = cls._truncate_if_needed(t1)
 
-            # Tweet 2: Movers & Binance Spot Activity
             t2 = (
                 f"📊 KEY MOVERS & BINANCE SPOT ACTIVITY:\n\n"
-                f"• $SOL: ${sol_p:,.2f} ({sol_sign}{sol_c:.1f}%)\n"
-                f"• ${top_g['asset']}: +{top_g['priceChangePercent']:.1f}%\n"
+                f"{movers_lines}\n"
                 f"• Tracked 24h Volume: {vol_str} USD\n"
                 f"• Watchlist Avg Movement: {avg_sign}{avg_move:.2f}%\n\n"
-                f"Spot order flow shows sustained liquidity across leading pairs. (2/3)"
+                f"Spot order flow shows sustained liquidity across active pairs. (2/3)"
             )
             t2 = cls._truncate_if_needed(t2)
 
-            # Tweet 3: Outlook & Takeaway
             t3 = (
-                f"💡 TAKEAWAY: Capital is rotating into high-beta layer-1s while BTC "
-                f"builds liquidity above support.\n\n"
-                f"Are you taking profits into stables or riding the momentum?\n\n"
-                f"#Bitcoin #Solana #Crypto #Binance (3/3)"
+                f"{t3_takeaway}\n\n"
+                f"Are you accumulating dips into stables or waiting for confirmation?\n\n"
+                f"#Bitcoin #Crypto #Binance (3/3)"
             )
             t3 = cls._truncate_if_needed(t3)
 
             tweets = [t1, t2, t3]
         else:
-            # Single punchy tweet (Cointelegraph / CoinMarketCap format)
+            # Single punchy tweet
             single = (
-                f"⚡ MARKET UPDATE: Bitcoin trades at ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) "
-                f"as altcoin momentum accelerates.\n\n"
-                f"Top runners: ${top_g['asset']} (+{top_g['priceChangePercent']:.1f}%) & "
-                f"$SOL ${sol_p:,.2f} ({sol_sign}{sol_c:.1f}%).\n"
-                f"Tracked 24h volume tops {vol_str} on Binance spot.\n\n"
+                f"{single_lead}"
+                f"Key movers: {runners_str}.\n"
+                f"Tracked 24h volume stands at {vol_str} on Binance spot.\n\n"
                 f"#Bitcoin #Crypto #Binance"
             )
             tweets = [cls._truncate_if_needed(single)]
@@ -241,7 +263,21 @@ class TweetDrafter:
         abs_pnl_usd = abs(summary.total_24h_pnl_usd)
         abs_pnl_pct = abs(summary.total_24h_pnl_pct)
 
-        # Top asset
+        # Identify primary performance contributor (aligned with AISummaryGenerator)
+        crypto_positions = [p for p in summary.positions if not p.is_stablecoin]
+        crypto_by_change = sorted(crypto_positions, key=lambda x: x.change_24h_pct, reverse=True)
+        top_gain = crypto_by_change[0] if crypto_by_change else None
+        worst_drop = crypto_by_change[-1] if crypto_by_change else None
+
+        if summary.total_24h_pnl_usd >= 0 and top_gain and top_gain.change_24h_pct > 0:
+            driver_pos = top_gain
+        elif summary.total_24h_pnl_usd < 0 and worst_drop and worst_drop.change_24h_pct < 0:
+            driver_pos = worst_drop
+        else:
+            driver_pos = top_gain or (summary.positions[0] if summary.positions else None)
+
+        driver_asset_str = f"${driver_pos.asset} ({driver_pos.change_24h_pct:+.1f}%)" if driver_pos else "Crypto"
+
         top_pos = summary.positions[0] if summary.positions else None
         top_asset_str = f"${top_pos.asset} ({top_pos.allocation_pct:.0f}%)" if top_pos else "Crypto"
 
@@ -250,7 +286,8 @@ class TweetDrafter:
             context = (
                 f"Valuation: ${summary.total_value_usd:,.2f}\n"
                 f"24h P&L: {pnl_sign}${abs_pnl_usd:,.2f} ({pnl_sign}{abs_pnl_pct:.2f}%)\n"
-                f"Top Asset: {top_asset_str}\n"
+                f"Top Holding: {top_asset_str}\n"
+                f"Primary Driver: {driver_asset_str}\n"
                 f"Stables: ${summary.stablecoin_value_usd:,.2f} ({summary.stablecoin_pct:.1f}%)\n"
                 f"Holdings: {', '.join(f'{p.asset}: {p.allocation_pct:.0f}%' for p in summary.positions[:4])}"
             )
@@ -287,7 +324,7 @@ class TweetDrafter:
             t2 = cls._truncate_if_needed(t2)
 
             t3 = (
-                f"🎯 TAKEAWAY: {top_asset_str} drove today's P&L. Rebalancing "
+                f"🎯 TAKEAWAY: {driver_asset_str} drove today's P&L. Rebalancing "
                 f"thresholds monitored via @Binance Agent OS.\n\n"
                 f"Daily risk check completed. Ready for tomorrow's session.\n\n"
                 f"#DeFi #CryptoPortfolio #BinanceAgentOS (3/3)"

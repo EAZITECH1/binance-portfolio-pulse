@@ -11,7 +11,7 @@ import argparse
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -52,8 +52,8 @@ def generate_portfolio_report(
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    timestamp_str = datetime.utcnow().strftime("%Y-%m-%d_%H%M%S")
-    date_str = datetime.utcnow().strftime("%Y-%m-%d")
+    timestamp_str = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prefix = output_filename_prefix or f"binance_portfolio_{date_str}"
 
     logger.info(f"Starting Binance PortfolioPulse analysis in [{mode.upper()}] mode...")
@@ -80,20 +80,34 @@ def generate_portfolio_report(
             raw_balances = mcp.call_tool("get_account_balances", {})
             source_label = "Binance Agent OS (MCP Server)"
 
-            # Fetch market data for each held asset
-            for item in raw_balances:
-                asset = item.get("asset", "").upper()
-                if asset in ("USDT", "USDC", "FDUSD"):
-                    continue
+            # Batch fetch tickers for all non-stable held assets in 1 MCP tool call
+            held_non_stables = [
+                item.get("asset", "").upper()
+                for item in raw_balances
+                if item.get("asset", "").upper() not in ("USDT", "USDC", "FDUSD")
+            ]
+            symbols_to_fetch = [f"{a}USDT" for a in held_non_stables]
+            try:
+                batch_res = mcp.call_tool("get_ticker_24hr", {"symbols": symbols_to_fetch})
+                batch_map = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
+            except Exception:
+                batch_map = {}
+
+            for asset in held_non_stables:
                 sym = f"{asset}USDT"
+                ticker = batch_map.get(sym)
+                if not ticker:
+                    try:
+                        ticker = mcp.call_tool("get_ticker_24hr", {"symbol": sym})
+                    except Exception as e:
+                        logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
+                        ticker = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                tickers[sym] = ticker
                 try:
-                    ticker = mcp.call_tool("get_ticker_24hr", {"symbol": sym})
-                    tickers[sym] = ticker
                     klines = mcp.call_tool("get_klines", {"symbol": sym, "limit": 7})
                     trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
                 except Exception as e:
-                    logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
-                    tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                    logger.warning(f"Failed to fetch klines for {sym}: {e}")
 
         elif mode == "api":
             logger.info(f"Connecting to Binance REST API at {config.base_url}...")
@@ -119,20 +133,31 @@ def generate_portfolio_report(
                 raw_balances = mock.get_account_balances()
                 source_label = "Binance REST (Live Market + Demo Portfolio)"
 
-            # Fetch live market data
-            for item in raw_balances:
-                asset = item.get("asset", "").upper()
-                if asset in ("USDT", "USDC", "FDUSD"):
-                    continue
+            # Batch fetch 24hr tickers for all non-stable assets in 1 single HTTP request
+            held_non_stables = [
+                item.get("asset", "").upper()
+                for item in raw_balances
+                if item.get("asset", "").upper() not in ("USDT", "USDC", "FDUSD")
+            ]
+            symbols_to_fetch = [f"{a}USDT" for a in held_non_stables]
+            batch_res = api.get_tickers_batch(symbols_to_fetch)
+            batch_map = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
+
+            for asset in held_non_stables:
                 sym = f"{asset}USDT"
+                ticker = batch_map.get(sym)
+                if not ticker:
+                    try:
+                        ticker = api.get_ticker_24hr(sym)
+                    except Exception as e:
+                        logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
+                        ticker = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                tickers[sym] = ticker
                 try:
-                    ticker = api.get_ticker_24hr(sym)
-                    tickers[sym] = ticker
                     klines = api.get_klines(sym, interval="1d", limit=7)
                     trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
                 except Exception as e:
-                    logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
-                    tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                    logger.warning(f"Failed to fetch klines for {sym}: {e}")
 
         else:  # 'mock'
             logger.info("Operating in Mock / Sandbox demo mode (Zero keys required).")
@@ -277,7 +302,7 @@ def generate_market_brief_report(
     import json
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
-    date_str = datetime.utcnow().strftime("%Y-%m-%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prefix = f"binance_market_brief_{date_str}"
 
     logger.info(f"Generating Market Intelligence Brief in [{mode.upper()}] mode...")

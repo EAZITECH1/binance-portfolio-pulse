@@ -2,7 +2,7 @@
 Markdown report generator for Binance PortfolioPulse AI.
 Produces clean, GitHub-flavored Markdown reports with tables, emojis, and risk badges.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from ..analytics.portfolio import PortfolioSummary
@@ -23,7 +23,7 @@ class MarkdownReporter:
         ai_summary: PlainLanguageSummary,
         source_mode: str = "Binance Agent OS (MCP)",
     ) -> str:
-        now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         pnl_symbol = "+" if summary.total_24h_pnl_usd >= 0 else "-"
         abs_pnl_usd = abs(summary.total_24h_pnl_usd)
         abs_pnl_pct = abs(summary.total_24h_pnl_pct)
