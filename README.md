@@ -6,23 +6,23 @@
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Protocol%202024--11--05-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests: Passing](https://img.shields.io/badge/tests-12%2F12%20passing-success)](tests/)
+[![Tests: Passing](https://img.shields.io/badge/tests-13%2F13%20passing-success)](tests/)
 
 Binance PortfolioPulse AI is an agentic finance and social intelligence system built for the **Binance Agent OS Mini Hackathon (Track A – Agent Creation, Data Analysis theme)**.
 
-It bridges the **Binance Model Context Protocol (MCP)** server and Binance Exchange APIs with an autonomous editorial workflow. Whenever a connected agent (Claude, Codex, Cursor, Grok) or creator asks for *"a market update"*, the agent analyzes market-wide momentum, pulls Binance market indicators, evaluates risk vulnerabilities, and drafts ready-to-post, Cointelegraph/CoinMarketCap-style tweets and threads.
+It bridges the **Binance Model Context Protocol (MCP)** server and Binance Exchange APIs with an autonomous editorial workflow. Whenever a connected agent (Claude, Codex, Cursor, Grok) or creator asks for *"a market update"*, the agent analyzes real-time market-wide momentum, pulls verified Binance market indicators, evaluates risk vulnerabilities, and drafts ready-to-post, Cointelegraph/CoinMarketCap-style tweets and threads.
 
 ---
 
 ## 🌟 Key Features
 
-- 🌐 **Market-Wide Intelligence Briefs:** Tracks top movers, volume leaders, and macro sentiment across a customizable watchlist (BTC, ETH, SOL, BNB, SUI, NEAR, AVAX, DOGE, PEPE), independent of portfolio holdings.
-- 📊 **Binance Market Indicators & Volume Tracking:** Ingests live 24h ticker metrics, tracked exchange volumes, top gainers, and market sentiment directly from Binance spot markets.
+- 🌐 **Real-Time Market-Wide Intelligence:** Tracks top movers, volume leaders, and macro sentiment across a customizable watchlist (BTC, ETH, SOL, BNB, SUI, NEAR, AVAX, DOGE, PEPE), using 100% genuine live Binance spot exchange data.
+- 📊 **Verified Binance Market Indicators & Volume Tracking:** Ingests live 24h ticker metrics, tracked exchange volumes, top gainers, and market sentiment directly from Binance spot markets. Zero deceptive mock data.
 - 🐦 **Crypto-Media Tweet & Thread Drafter:** Generates publication-ready social posts in crisp crypto-journalism style. Supports single tweets and 3-part threads, strictly adhering to Twitter/X's 280-character ceiling.
 - 🔌 **Native Binance Agent OS MCP Integration:** Implements the Model Context Protocol over HTTP/SSE (`https://agent.binance.com/mcp/agentic`) and interactive stdio for AI client pairing.
 - 🛡️ **Quantitative Portfolio Risk Engine:** Automatically detects single-asset concentration (>35%), 24h volatility anomalies (>8%), sharp pullbacks, and depleted cash buffers.
 - 🎨 **Multi-Format Reporting:** Produces Markdown briefs, dark-mode HTML dashboards, machine-readable JSON payloads, and drafted tweets.
-- ⚡ **Zero-Key Judge Experience:** Bundles a high-fidelity mock engine so hackathon reviewers can test the entire pipeline end-to-end without needing Binance API keys.
+- 🔐 **Transparent Security & Authentication:** Live market updates require zero keys. Private account portfolio tracking requires read-only Binance Spot API credentials.
 - ⏰ **Cron & Daemon Ready:** Supports on-demand queries as well as automated recurring runs (`--schedule daily` or `--interval-minutes N`).
 
 ---
@@ -82,20 +82,23 @@ When PortfolioPulse is registered as an MCP server in **Claude Code**, **Claude 
 
 ---
 
-## 🚀 Quickstart (Zero-Key Demonstration)
+## 🚀 Quickstart (Real-Time Live Binance Market Intelligence)
 
-PortfolioPulse runs out-of-the-box with standard Python 3.9+ and **zero required external packages**:
+PortfolioPulse connects directly to live Binance spot markets out-of-the-box with standard Python 3.9+ and **zero required external packages**:
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/EAZITECH1/binance-portfolio-pulse.git
 cd binance-portfolio-pulse
 
-# 2. Generate a market brief and draft a ready-to-post tweet thread
+# 2. Generate a live market brief and draft a ready-to-post tweet thread from real Binance prices
 python3 run_agent.py --brief market --draft-tweet --tweet-style thread
 
-# 3. Generate a full portfolio analysis report with dark-mode HTML dashboard
-python3 run_agent.py --brief portfolio --format all --output-dir reports/
+# 3. Ask any question about real market momentum or asset movements
+python3 run_agent.py --ask "Give me an executive market briefing on Bitcoin and Solana"
+
+# 4. (Optional) For private wallet portfolio reports, add read-only keys to .env:
+#    python3 run_agent.py --brief portfolio --format all --output-dir reports/
 ```
 
 ### Market Brief & Tweet Output Example:
@@ -274,7 +277,7 @@ Run the test suite with Python's built-in `unittest` runner:
 python3 -m unittest discover -s tests -v
 ```
 
-**12 unit tests covering:**
+**13 unit tests covering:**
 - Character count validation on single tweets (`<= 280` chars)
 - Thread sequence validation (`1/3`, `2/3`, `3/3`)
 - Watchlist market overview, top movers ranking, and volume aggregation

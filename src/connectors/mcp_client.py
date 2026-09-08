@@ -205,57 +205,10 @@ class BinanceMCPClient:
         from ..analytics.market_brief import MarketBriefGenerator
         from ..config import config
 
-        # Decide whether to use real exchange API or mock
-        use_live = (mode == "api") or (mode != "mock" and bool(self.api_client.api_key))
+        active_mode = mode or config.mode
 
-        # Ingest balances & tickers
-        raw = []
-        if use_live:
-            if self.api_client.api_key and self.api_client.api_secret:
-                try:
-                    raw = self.api_client.get_account_balances()
-                except Exception as e:
-                    logger.warning(f"Error fetching live balances: {e}. Using demonstration portfolio.")
-                    raw = self.mock_provider.get_account_balances()
-            else:
-                logger.info("No API keys configured. Using demonstration portfolio with market data.")
-                raw = self.mock_provider.get_account_balances()
-
-            tickers = {}
-            trends = {}
-            non_stables = [
-                item.get("asset", "").upper()
-                for item in raw
-                if item.get("asset", "").upper() not in ("USDT", "USDC", "FDUSD")
-            ]
-            symbols_to_fetch = [f"{a}USDT" for a in non_stables]
-            batch_tickers = {}
-            if self.api_client:
-                try:
-                    batch_res = self.api_client.get_tickers_batch(symbols_to_fetch)
-                    batch_tickers = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
-                except Exception:
-                    batch_tickers = {}
-
-            for item in raw:
-                asset = item.get("asset", "").upper()
-                if asset in ("USDT", "USDC", "FDUSD"):
-                    continue
-                sym = f"{asset}USDT"
-                t = batch_tickers.get(sym)
-                if not t:
-                    try:
-                        t = self.api_client.get_ticker_24hr(sym)
-                    except Exception:
-                        t = self.mock_provider.get_ticker_24hr(sym)
-                if t:
-                    tickers[sym] = t
-                    try:
-                        k = self.api_client.get_klines(sym, interval="1d", limit=7)
-                    except Exception:
-                        k = self.mock_provider.get_klines_history(sym, limit=7)
-                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
-        else:
+        if active_mode == "mock":
+            # Mock mode explicitly requested (e.g. unit tests)
             raw = self.mock_provider.get_account_balances()
             tickers = {}
             trends = {}
@@ -269,6 +222,67 @@ class BinanceMCPClient:
                     tickers[sym] = t
                     k = self.mock_provider.get_klines_history(sym, limit=7)
                     trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
+        else:
+            # Real Live Market Data Mode (Binance API or MCP)
+            has_keys = bool(self.api_client.api_key and self.api_client.api_secret)
+
+            if not has_keys:
+                # Provide real live Binance market data without credentials
+                brief = MarketBriefGenerator.generate(watchlist=watchlist, mode="api")
+                answer = (
+                    f"🔐 Portfolio Authentication Notice:\n"
+                    f"To analyze your personal wallet holdings, risk exposure, and P&L with real account data, "
+                    f"please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in your .env file.\n\n"
+                    f"🌐 Real-Time Binance Market Context:\n"
+                    f"• {brief.headline}\n"
+                    f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
+                    f"• Tracked 24h Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n\n"
+                    f"📌 Live Market Takeaways:\n" +
+                    "\n".join(f"   - {kp}" for kp in brief.key_points[:3]) +
+                    f"\n\n💡 Tip: To inspect live market movers and trends without credentials, run:\n"
+                    f"   python3 run_agent.py --brief market"
+                )
+                return {
+                    "answer": answer,
+                    "prompt": prompt,
+                    "market_brief": brief.to_dict(),
+                    "requires_credentials": True,
+                }
+
+            # User provided real API credentials - fetch genuine balances
+            raw = self.api_client.get_account_balances()
+            tickers = {}
+            trends = {}
+            non_stables = [
+                item.get("asset", "").upper()
+                for item in raw
+                if item.get("asset", "").upper() not in ("USDT", "USDC", "FDUSD")
+            ]
+            symbols_to_fetch = [f"{a}USDT" for a in non_stables]
+            batch_tickers = {}
+            if symbols_to_fetch:
+                try:
+                    batch_res = self.api_client.get_tickers_batch(symbols_to_fetch)
+                    batch_tickers = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
+                except Exception as e:
+                    logger.warning(f"Batch ticker fetch failed: {e}")
+
+            for item in raw:
+                asset = item.get("asset", "").upper()
+                if asset in ("USDT", "USDC", "FDUSD"):
+                    continue
+                sym = f"{asset}USDT"
+                t = batch_tickers.get(sym)
+                if not t:
+                    logger.info(f"No active Binance spot pair for {sym}. Valued at $0.00.")
+                    t = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                tickers[sym] = t
+                if float(t.get("lastPrice", 0.0)) > 0:
+                    try:
+                        k = self.api_client.get_klines(sym, interval="1d", limit=7)
+                        trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, t, k)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch klines for {sym}: {e}")
 
         summary = PortfolioAnalyzer.analyze(raw, tickers)
         risk = RiskAnalyzer.evaluate(
@@ -288,17 +302,29 @@ class BinanceMCPClient:
             gemini_api_key=config.gemini_api_key,
             openai_api_key=config.openai_api_key,
         )
-        brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode or ("api" if use_live else "mock"))
+        brief = MarketBriefGenerator.generate(watchlist=watchlist, mode="mock" if active_mode == "mock" else "api")
 
-        # Build comprehensive answer
-        answer = (
-            f"Portfolio Valuation: ${summary.total_value_usd:,.2f} | 24h P&L: {'+' if summary.total_24h_pnl_usd >= 0 else ''}${summary.total_24h_pnl_usd:,.2f} ({summary.total_24h_pnl_pct:+.2f}%)\n"
-            f"Risk Level: {risk.risk_level} (Score: {risk.overall_score}/10)\n\n"
-            f"Analysis for: \"{prompt}\"\n\n"
-            f"Executive Summary: {ai_summary.headline}\n\n"
-            f"Market Context: {brief.headline}\n\n"
-            f"Overview: {ai_summary.overview}"
-        )
+        is_market_query = any(w in prompt.lower() for w in ["market", "brief", "briefing", "bitcoin", "solana", "btc", "eth", "crypto", "trend", "altcoin"])
+
+        if is_market_query and summary.total_value_usd <= 0:
+            answer = (
+                f"🌐 Live Binance Market Intelligence Briefing:\n\n"
+                f"• Headline: {brief.headline}\n"
+                f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
+                f"• 24h Tracked Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n\n"
+                f"📌 Key Market Observations:\n" +
+                "\n".join(f"   - {kp}" for kp in brief.key_points) +
+                f"\n\n💼 Portfolio Status: Your Binance Spot account currently has no active funded token holdings ($0.00)."
+            )
+        else:
+            answer = (
+                f"Portfolio Valuation: ${summary.total_value_usd:,.2f} | 24h P&L: {'+' if summary.total_24h_pnl_usd >= 0 else ''}${summary.total_24h_pnl_usd:,.2f} ({summary.total_24h_pnl_pct:+.2f}%)\n"
+                f"Risk Level: {risk.risk_level} (Score: {risk.overall_score}/10)\n\n"
+                f"Analysis for: \"{prompt}\"\n\n"
+                f"Executive Summary: {ai_summary.headline}\n\n"
+                f"Market Context: {brief.headline}\n\n"
+                f"Overview: {ai_summary.overview}"
+            )
 
         return {
             "query": prompt,
@@ -323,15 +349,15 @@ class BinanceMCPClient:
         logger.debug(f"Handling '{name}' via local agent tool provider.")
         from ..config import config
         if name == "get_account_balances":
-            if self.fallback_to_api and self.api_client.api_key:
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
                 try:
                     return self.api_client.get_account_balances()
                 except Exception as e:
                     logger.warning(f"Error fetching account balances: {e}")
-                    return []
-            if config.mode == "mock" and not self.api_client.api_key:
+                    return {"error": str(e)}
+            if config.mode == "mock":
                 return self.mock_provider.get_account_balances()
-            return []
+            return {"error": "BINANCE_API_KEY and BINANCE_API_SECRET are required for account balance access"}
 
         elif name == "get_ticker_24hr":
             from ..config import config
@@ -339,56 +365,34 @@ class BinanceMCPClient:
             if symbols and isinstance(symbols, list):
                 if config.mode == "mock":
                     return [self.mock_provider.get_ticker_24hr(s) for s in symbols if self.mock_provider.get_ticker_24hr(s)]
-                if self.fallback_to_api and self.api_client:
-                    try:
-                        return self.api_client.get_tickers_batch(symbols)
-                    except Exception:
-                        pass
-                return [self.mock_provider.get_ticker_24hr(s) for s in symbols if self.mock_provider.get_ticker_24hr(s)]
+                return self.api_client.get_tickers_batch(symbols)
 
             sym = (arguments.get("symbol") or "BTCUSDT").upper()
             if config.mode == "mock":
                 t = self.mock_provider.get_ticker_24hr(sym)
                 return t if t is not None else {"error": f"Symbol '{sym}' not found in mock catalog"}
-            if self.fallback_to_api and self.api_client:
-                try:
-                    return self.api_client.get_ticker_24hr(sym)
-                except Exception:
-                    pass
-            t = self.mock_provider.get_ticker_24hr(sym)
-            return t if t is not None else {"error": f"Symbol '{sym}' not found in mock catalog"}
+            return self.api_client.get_ticker_24hr(sym)
 
         elif name == "get_klines":
-            sym = arguments.get("symbol", "BTCUSDT")
+            sym = (arguments.get("symbol") or "BTCUSDT").upper()
             limit = arguments.get("limit", 7)
             from ..config import config
             if config.mode == "mock":
                 return self.mock_provider.get_klines_history(sym, limit=limit)
-            if self.fallback_to_api and self.api_client:
-                try:
-                    return self.api_client.get_klines(sym, limit=limit)
-                except Exception:
-                    pass
-            return self.mock_provider.get_klines_history(sym, limit=limit)
+            return self.api_client.get_klines(sym, limit=limit)
 
         elif name == "get_market_overview":
             watchlist = arguments.get("watchlist")
             from ..config import config
             if config.mode == "mock":
                 return self.mock_provider.get_market_overview(watchlist)
-            if self.fallback_to_api and self.api_client:
-                try:
-                    return self.api_client.get_market_overview(watchlist)
-                except Exception as e:
-                    logger.warning(f"Live market overview query failed: {e}")
-            return self.mock_provider.get_market_overview(watchlist)
+            return self.api_client.get_market_overview(watchlist)
 
         elif name == "generate_market_brief":
             from ..analytics.market_brief import MarketBriefGenerator
             from ..config import config
             watchlist = arguments.get("watchlist")
-            mode = "mock" if config.mode == "mock" else "api"
-            brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode)
+            brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=config.mode)
             return brief.to_dict()
 
         elif name == "draft_tweet":
@@ -401,21 +405,24 @@ class BinanceMCPClient:
             if topic == "portfolio":
                 from ..analytics.portfolio import PortfolioAnalyzer
                 raw = []
-                if self.fallback_to_api and self.api_client.api_key:
+                if self.api_client.api_key and self.api_client.api_secret:
                     try:
                         raw = self.api_client.get_account_balances()
-                    except Exception:
-                        pass
-                if not raw and config.mode == "mock" and not self.api_client.api_key:
+                    except Exception as e:
+                        logger.warning(f"Error fetching account balances: {e}")
+                elif config.mode == "mock":
                     raw = self.mock_provider.get_account_balances()
 
+                if not raw:
+                    return {"error": "No portfolio balances found. Configure BINANCE_API_KEY and BINANCE_API_SECRET in .env for portfolio tweets, or use topic='market' for real-time market tweets."}
+
                 tickers = {}
-                for item in raw:
-                    sym = f"{item['asset']}USDT"
-                    try:
-                        tickers[sym] = self.api_client.get_ticker_24hr(sym)
-                    except Exception:
-                        tickers[sym] = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                held_symbols = [f"{item['asset']}USDT" for item in raw if item.get('asset') not in ("USDT", "USDC", "FDUSD")]
+                if config.mode == "mock":
+                    tickers = {s: self.mock_provider.get_ticker_24hr(s) for s in held_symbols}
+                else:
+                    batch_res = self.api_client.get_tickers_batch(held_symbols)
+                    tickers = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
                 summary = PortfolioAnalyzer.analyze(raw, tickers)
                 draft = TweetDrafter.draft_portfolio_tweet(
                     summary,
@@ -424,8 +431,7 @@ class BinanceMCPClient:
                     llm_model=config.llm_model,
                 )
             else:
-                mode = "mock" if config.mode == "mock" else "api"
-                brief = MarketBriefGenerator.generate(mode=mode)
+                brief = MarketBriefGenerator.generate(mode=config.mode)
                 draft = TweetDrafter.draft_market_tweet(
                     brief,
                     style=style,

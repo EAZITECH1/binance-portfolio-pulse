@@ -37,7 +37,7 @@ from src.reporters.json_reporter import JSONReporter
 
 
 def generate_portfolio_report(
-    mode: str = "mock",
+    mode: str = "api",
     output_dir: str = "reports",
     formats: List[str] = None,
     output_filename_prefix: str = None,
@@ -78,6 +78,17 @@ def generate_portfolio_report(
                 ),
             )
             raw_balances = mcp.call_tool("get_account_balances", {})
+            if not raw_balances or (isinstance(raw_balances, dict) and "error" in raw_balances):
+                print("\n" + "=" * 64)
+                print(" 🔐 BINANCE API CREDENTIALS REQUIRED FOR PORTFOLIO ANALYSIS")
+                print("=" * 64)
+                print(" Real portfolio tracking requires read-only Binance Spot API keys.")
+                print(" 1. Add BINANCE_API_KEY and BINANCE_API_SECRET to your .env file.")
+                print(" 2. Ensure only 'Read Info' or 'Enable Reading' permissions are granted.")
+                print("\n 💡 Want real-time Binance market intelligence without credentials?")
+                print("    Run: python3 run_agent.py --brief market")
+                print("=" * 64 + "\n")
+                return {}
             source_label = "Binance Agent OS (MCP Server)"
 
             # Batch fetch tickers for all non-stable held assets in 1 MCP tool call
@@ -97,17 +108,15 @@ def generate_portfolio_report(
                 sym = f"{asset}USDT"
                 ticker = batch_map.get(sym)
                 if not ticker:
-                    try:
-                        ticker = mcp.call_tool("get_ticker_24hr", {"symbol": sym})
-                    except Exception as e:
-                        logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
-                        ticker = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                    logger.info(f"No active Binance spot pair for {sym}. Valued at $0.00.")
+                    ticker = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
                 tickers[sym] = ticker
-                try:
-                    klines = mcp.call_tool("get_klines", {"symbol": sym, "limit": 7})
-                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
-                except Exception as e:
-                    logger.warning(f"Failed to fetch klines for {sym}: {e}")
+                if float(ticker.get("lastPrice", 0.0)) > 0:
+                    try:
+                        klines = mcp.call_tool("get_klines", {"symbol": sym, "limit": 7})
+                        trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch klines for {sym}: {e}")
 
         elif mode == "api":
             logger.info(f"Connecting to Binance REST API at {config.base_url}...")
@@ -118,20 +127,25 @@ def generate_portfolio_report(
             )
             source_label = "Binance Direct Exchange API"
             
-            # If keys provided, fetch live account; otherwise fallback gracefully
+            # If keys provided, fetch live account; otherwise prompt transparently
             if config.api_key and config.api_secret:
                 try:
                     raw_balances = api.get_account_balances()
                 except Exception as e:
-                    logger.error(f"Failed to fetch private balances: {e}. Using demonstration balance set.")
-                    mock = MockDataProvider()
-                    raw_balances = mock.get_account_balances()
-                    source_label = "Binance REST (Live Market + Demo Portfolio)"
+                    logger.error(f"Failed to fetch private balances: {e}.")
+                    raise ConnectionError(f"Failed to fetch private Binance account balances: {e}")
             else:
-                logger.info("No API keys configured. Using demonstration portfolio with live market prices.")
-                mock = MockDataProvider()
-                raw_balances = mock.get_account_balances()
-                source_label = "Binance REST (Live Market + Demo Portfolio)"
+                logger.warning("No Binance API credentials configured in .env.")
+                print("\n" + "=" * 64)
+                print(" 🔐 BINANCE API CREDENTIALS REQUIRED FOR PORTFOLIO ANALYSIS")
+                print("=" * 64)
+                print(" Real portfolio tracking requires read-only Binance Spot API keys.")
+                print(" 1. Add BINANCE_API_KEY and BINANCE_API_SECRET to your .env file.")
+                print(" 2. Ensure only 'Read Info' or 'Enable Reading' permissions are granted.")
+                print("\n 💡 Want real-time Binance market intelligence without credentials?")
+                print("    Run: python3 run_agent.py --brief market")
+                print("=" * 64 + "\n")
+                return {}
 
             # Batch fetch 24hr tickers for all non-stable assets in 1 single HTTP request
             held_non_stables = [
@@ -147,17 +161,15 @@ def generate_portfolio_report(
                 sym = f"{asset}USDT"
                 ticker = batch_map.get(sym)
                 if not ticker:
-                    try:
-                        ticker = api.get_ticker_24hr(sym)
-                    except Exception as e:
-                        logger.warning(f"No active Binance spot pair for {sym} ({e}). Valued at $0.00.")
-                        ticker = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
+                    logger.info(f"No active Binance spot pair for {sym}. Valued at $0.00.")
+                    ticker = {"symbol": sym, "lastPrice": "0.00", "priceChangePercent": "0.00"}
                 tickers[sym] = ticker
-                try:
-                    klines = api.get_klines(sym, interval="1d", limit=7)
-                    trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
-                except Exception as e:
-                    logger.warning(f"Failed to fetch klines for {sym}: {e}")
+                if float(ticker.get("lastPrice", 0.0)) > 0:
+                    try:
+                        klines = api.get_klines(sym, interval="1d", limit=7)
+                        trends[asset] = MarketTrendAnalyzer.analyze_asset_trend(asset, ticker, klines)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch klines for {sym}: {e}")
 
         else:  # 'mock'
             logger.info("Operating in Mock / Sandbox demo mode (Zero keys required).")
@@ -369,7 +381,7 @@ def main():
         "--mode",
         choices=["mock", "mcp", "api"],
         default=config.mode,
-        help="Data ingestion mode: 'mock' (default, no keys required), 'mcp' (Binance Agent OS MCP), 'api' (Direct REST API)",
+        help="Data ingestion mode: 'api' (default, real Binance live data), 'mcp' (Binance Agent OS MCP), 'mock' (test fixtures)",
     )
     parser.add_argument(
         "--brief",

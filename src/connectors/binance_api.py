@@ -148,24 +148,23 @@ class BinanceAPIClient:
     def get_tickers_batch(self, symbols: List[str]) -> List[Dict[str, Any]]:
         """
         Fetch 24-hour price change statistics for multiple symbols in a single HTTP request.
-        Uses Binance GET /api/v3/ticker/24hr?symbols=[...]
+        Uses Binance GET /api/v3/ticker/24hr?symbols=[...] with fallback to full exchange tickers.
         """
         if not symbols:
             return []
+        sym_set = {s.upper() for s in symbols}
         try:
-            symbols_param = json.dumps([s.upper() for s in symbols], separators=(",", ":"))
+            symbols_param = json.dumps(list(sym_set), separators=(",", ":"))
             data = self._request("GET", "/api/v3/ticker/24hr", {"symbols": symbols_param})
             if isinstance(data, list):
                 return data
-        except Exception as e:
-            logger.warning(f"Batch ticker query failed ({e}), falling back to per-symbol queries.")
-            results = []
-            for s in symbols:
-                try:
-                    results.append(self.get_ticker_24hr(s))
-                except Exception:
-                    pass
-            return results
+        except Exception:
+            # If an unlisted/invalid token caused 400, fetch full tickers in 1 fast request
+            try:
+                all_tickers = self.get_all_tickers_24hr()
+                return [t for t in all_tickers if t.get("symbol") in sym_set]
+            except Exception as e:
+                logger.warning(f"Batch ticker query failed: {e}")
         return []
 
     def get_all_tickers_24hr(self) -> List[Dict[str, Any]]:

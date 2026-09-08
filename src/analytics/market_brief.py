@@ -6,8 +6,6 @@ that does not require personal portfolio holdings.
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 
-from ..connectors.mock_provider import MockDataProvider
-
 
 class MarketBrief:
     """Encapsulates a synthesized market brief."""
@@ -92,16 +90,17 @@ class MarketBriefGenerator:
         from ..utils.logger import logger
 
         overview = None
-        if mode != "mock":
+        if mode == "mock":
+            from ..connectors.mock_provider import MockDataProvider
+            mock = MockDataProvider()
+            overview = mock.get_market_overview(watchlist)
+        else:
             try:
                 api = BinanceAPIClient()
                 overview = api.get_market_overview(watchlist)
             except Exception as e:
-                logger.warning(f"Live market overview query failed: {e}. Using benchmark overview.")
-
-        if not overview or not overview.get("assets"):
-            mock = MockDataProvider()
-            overview = mock.get_market_overview(watchlist)
+                logger.error(f"Live Binance market overview query failed: {e}")
+                raise ConnectionError(f"Unable to fetch real-time Binance market data: {e}")
 
         assets = {a["asset"]: a for a in overview.get("assets", [])}
         top_gainers = overview.get("top_gainers", [])

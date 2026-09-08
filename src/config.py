@@ -38,8 +38,7 @@ except ImportError:
 
 @dataclass
 class AgentConfig:
-    """Application and Risk Configuration."""
-    mode: str = os.getenv("AGENT_MODE", "mock").lower()
+    mode: str = os.getenv("AGENT_MODE", "api").lower()
     
     # Binance Agent OS MCP Server
     mcp_endpoint: str = os.getenv(
