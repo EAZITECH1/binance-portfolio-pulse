@@ -225,8 +225,7 @@ class BinanceAPIClient:
                     except Exception:
                         pass
         else:
-            # Exchange-wide discovery: scan all liquid USDT pairs for genuine top movers
-            benchmark_symbols = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"}
+            # Exchange-wide discovery: scan all liquid USDT spot pairs for genuine top movers
             try:
                 all_tickers = self.get_all_tickers_24hr()
                 for t in all_tickers:
@@ -241,9 +240,8 @@ class BinanceAPIClient:
                         q_vol = float(t.get("quoteVolume", 0.0))
                         if price <= 0:
                             continue
-                        # Require at least $1,000,000 in 24h quote volume to filter illiquid pairs,
-                        # but always guarantee core benchmark tickers are tracked
-                        if q_vol >= 1_000_000 or sym in benchmark_symbols:
+                        # Require at least $1,000,000 in 24h quote volume to filter out illiquid dust
+                        if q_vol >= 1_000_000:
                             raw_tickers.append(t)
                     except (ValueError, TypeError):
                         continue
@@ -256,14 +254,8 @@ class BinanceAPIClient:
                         and not any(t.get("symbol", "").endswith(x) for x in ["UPUSDT", "DOWNUSDT"])
                     ]
             except Exception as e:
-                logger.warning(f"Exchange-wide ticker fetch failed: {e}. Falling back to default liquid assets.")
-                fallback_symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "SUIUSDT", "NEARUSDT", "AVAXUSDT", "DOGEUSDT", "LINKUSDT", "ARBUSDT", "PEPEUSDT"]
-                for sym in fallback_symbols:
-                    try:
-                        t = self.get_ticker_24hr(sym)
-                        raw_tickers.append(t)
-                    except Exception:
-                        pass
+                logger.error(f"Exchange-wide ticker fetch failed: {e}")
+                raise ConnectionError(f"Failed to fetch live Binance exchange tickers: {e}")
 
         items = []
         total_vol_usd = 0.0
