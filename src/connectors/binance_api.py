@@ -9,7 +9,7 @@ import time
 import urllib.parse
 import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set
 
 from ..utils.logger import logger
 
@@ -200,12 +200,39 @@ class BinanceAPIClient:
                 })
         return active_balances
 
+    _active_symbols_cache: Optional[Set[str]] = None
+    _active_symbols_cache_time: float = 0.0
+
+    def get_active_spot_symbols(self) -> Set[str]:
+        """
+        Fetch all symbols currently active for spot trading (status == TRADING).
+        Caches result for 15 minutes to avoid redundant exchangeInfo network calls.
+        """
+        now = time.time()
+        if self._active_symbols_cache is not None and (now - self._active_symbols_cache_time) < 900:
+            return self._active_symbols_cache
+        try:
+            info = self._request("GET", "/api/v3/exchangeInfo", {"permissions": "SPOT"})
+            active = {
+                s["symbol"] for s in info.get("symbols", [])
+                if s.get("status") == "TRADING" and s.get("isSpotTradingAllowed", False)
+            }
+            self._active_symbols_cache = active
+            self._active_symbols_cache_time = now
+            return active
+        except Exception as e:
+            logger.warning(f"Failed to fetch active spot symbols from exchangeInfo: {e}")
+            if self._active_symbols_cache:
+                return self._active_symbols_cache
+            return set()
+
     def get_market_overview(self, watchlist: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Fetch real-time market overview across Binance spot markets.
         If watchlist is specified, evaluates those specific assets.
         If watchlist is None, evaluates exchange-wide liquid USDT spot pairs
         to identify the TRUE top gainers, top losers, total volume, and sentiment.
+        Strictly filters to actively trading pairs (excluding halted, break, or delisted tokens).
         """
         raw_tickers = []
         is_exchange_wide = not watchlist
@@ -225,9 +252,12 @@ class BinanceAPIClient:
                     except Exception:
                         pass
         else:
-            # Exchange-wide discovery: scan all liquid USDT spot pairs for genuine top movers
+            # Exchange-wide discovery: scan all liquid USDT spot pairs that are ACTIVELY TRADING
             try:
+                active_symbols = self.get_active_spot_symbols()
                 all_tickers = self.get_all_tickers_24hr()
+                now_ms = time.time() * 1000
+
                 for t in all_tickers:
                     sym = t.get("symbol", "")
                     if not sym.endswith("USDT"):
@@ -235,10 +265,19 @@ class BinanceAPIClient:
                     # Exclude leveraged/synthetic tokens (UP/DOWN/BEAR/BULL)
                     if any(sym.endswith(x) for x in ["UPUSDT", "DOWNUSDT", "BEARUSDT", "BULLUSDT"]):
                         continue
+                    # Exclude halted, break, suspended, or delisted pairs
+                    if active_symbols and sym not in active_symbols:
+                        continue
+                    # Ensure ticker was active recently (last trade closeTime within past 60 minutes)
+                    close_time = float(t.get("closeTime", 0))
+                    if close_time > 0 and (now_ms - close_time) > 3600 * 1000:
+                        continue
+
                     try:
                         price = float(t.get("lastPrice", 0.0))
                         q_vol = float(t.get("quoteVolume", 0.0))
-                        if price <= 0:
+                        trade_count = int(t.get("count", 0))
+                        if price <= 0 or trade_count <= 0:
                             continue
                         # Require at least $1,000,000 in 24h quote volume to filter out illiquid dust
                         if q_vol >= 1_000_000:
@@ -251,6 +290,7 @@ class BinanceAPIClient:
                     raw_tickers = [
                         t for t in all_tickers
                         if t.get("symbol", "").endswith("USDT")
+                        and (not active_symbols or t.get("symbol") in active_symbols)
                         and not any(t.get("symbol", "").endswith(x) for x in ["UPUSDT", "DOWNUSDT"])
                     ]
             except Exception as e:
