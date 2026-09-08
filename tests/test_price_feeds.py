@@ -57,11 +57,12 @@ class TestMarketOverview(unittest.TestCase):
         self.assertNotIn("FAKECOIN", gainer_assets)
 
     def test_get_top_by_market_cap(self):
-        """Verify get_top_by_market_cap returns ranked coins with market cap data."""
+        """Verify get_top_by_market_cap returns ranked coins with market cap data including stablecoins."""
         top = self.mock_provider.get_top_by_market_cap(limit=5)
         self.assertEqual(len(top), 5)
         self.assertEqual(top[0]["rank"], 1)
         self.assertEqual(top[0]["asset"], "BTC")
+        self.assertIn("USDT", [c["asset"] for c in top])
         self.assertIn("market_cap_formatted", top[0])
         self.assertGreater(top[0]["market_cap_usd"], 0)
 

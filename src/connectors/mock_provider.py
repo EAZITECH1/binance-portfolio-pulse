@@ -241,20 +241,20 @@ class MockDataProvider:
         }
 
     def get_top_by_market_cap(
-        self, limit: int = 10, include_stables: bool = False
+        self, limit: int = 10, include_stables: bool = True
     ) -> List[Dict[str, Any]]:
         """Mock top coins ranked by market capitalization for hermetic testing."""
         catalog = [
             {"rank": 1, "asset": "BTC", "name": "Bitcoin", "price": 63450.0, "market_cap_usd": 1250000000000.0, "market_cap_formatted": "$1.25T", "change_24h_pct": 3.15, "volume_24h_usd": 1200000000.0, "is_stablecoin": False},
             {"rank": 2, "asset": "ETH", "name": "Ethereum", "price": 2720.0, "market_cap_usd": 326000000000.0, "market_cap_formatted": "$326.0B", "change_24h_pct": -2.45, "volume_24h_usd": 800000000.0, "is_stablecoin": False},
-            {"rank": 3, "asset": "BNB", "name": "BNB", "price": 585.5, "market_cap_usd": 85000000000.0, "market_cap_formatted": "$85.0B", "change_24h_pct": 0.85, "volume_24h_usd": 200000000.0, "is_stablecoin": False},
-            {"rank": 4, "asset": "SOL", "name": "Solana", "price": 164.8, "market_cap_usd": 77000000000.0, "market_cap_formatted": "$77.0B", "change_24h_pct": 9.42, "volume_24h_usd": 450000000.0, "is_stablecoin": False},
-            {"rank": 5, "asset": "USDT", "name": "Tether", "price": 1.0, "market_cap_usd": 118000000000.0, "market_cap_formatted": "$118.0B", "change_24h_pct": 0.01, "volume_24h_usd": 25000000000.0, "is_stablecoin": True},
-            {"rank": 6, "asset": "XRP", "name": "XRP", "price": 0.58, "market_cap_usd": 32000000000.0, "market_cap_formatted": "$32.0B", "change_24h_pct": 1.20, "volume_24h_usd": 150000000.0, "is_stablecoin": False},
-            {"rank": 7, "asset": "DOGE", "name": "Dogecoin", "price": 0.12, "market_cap_usd": 17000000000.0, "market_cap_formatted": "$17.0B", "change_24h_pct": 2.10, "volume_24h_usd": 90000000.0, "is_stablecoin": False},
-            {"rank": 8, "asset": "ADA", "name": "Cardano", "price": 0.35, "market_cap_usd": 12000000000.0, "market_cap_formatted": "$12.0B", "change_24h_pct": -0.50, "volume_24h_usd": 60000000.0, "is_stablecoin": False},
-            {"rank": 9, "asset": "AVAX", "name": "Avalanche", "price": 28.5, "market_cap_usd": 11000000000.0, "market_cap_formatted": "$11.0B", "change_24h_pct": 4.10, "volume_24h_usd": 75000000.0, "is_stablecoin": False},
-            {"rank": 10, "asset": "SUI", "name": "Sui", "price": 1.95, "market_cap_usd": 5400000000.0, "market_cap_formatted": "$5.4B", "change_24h_pct": 5.20, "volume_24h_usd": 85000000.0, "is_stablecoin": False},
+            {"rank": 3, "asset": "USDT", "name": "Tether", "price": 1.0, "market_cap_usd": 118000000000.0, "market_cap_formatted": "$118.0B", "change_24h_pct": 0.01, "volume_24h_usd": 25000000000.0, "is_stablecoin": True},
+            {"rank": 4, "asset": "BNB", "name": "BNB", "price": 585.5, "market_cap_usd": 85000000000.0, "market_cap_formatted": "$85.0B", "change_24h_pct": 0.85, "volume_24h_usd": 200000000.0, "is_stablecoin": False},
+            {"rank": 5, "asset": "SOL", "name": "Solana", "price": 164.8, "market_cap_usd": 77000000000.0, "market_cap_formatted": "$77.0B", "change_24h_pct": 9.42, "volume_24h_usd": 450000000.0, "is_stablecoin": False},
+            {"rank": 6, "asset": "USDC", "name": "USDC", "price": 1.0, "market_cap_usd": 34000000000.0, "market_cap_formatted": "$34.0B", "change_24h_pct": 0.00, "volume_24h_usd": 6000000000.0, "is_stablecoin": True},
+            {"rank": 7, "asset": "XRP", "name": "XRP", "price": 0.58, "market_cap_usd": 32000000000.0, "market_cap_formatted": "$32.0B", "change_24h_pct": 1.20, "volume_24h_usd": 150000000.0, "is_stablecoin": False},
+            {"rank": 8, "asset": "DOGE", "name": "Dogecoin", "price": 0.12, "market_cap_usd": 17000000000.0, "market_cap_formatted": "$17.0B", "change_24h_pct": 2.10, "volume_24h_usd": 90000000.0, "is_stablecoin": False},
+            {"rank": 9, "asset": "ADA", "name": "Cardano", "price": 0.35, "market_cap_usd": 12000000000.0, "market_cap_formatted": "$12.0B", "change_24h_pct": -0.50, "volume_24h_usd": 60000000.0, "is_stablecoin": False},
+            {"rank": 10, "asset": "AVAX", "name": "Avalanche", "price": 28.5, "market_cap_usd": 11000000000.0, "market_cap_formatted": "$11.0B", "change_24h_pct": 4.10, "volume_24h_usd": 75000000.0, "is_stablecoin": False},
         ]
         filtered = [c for c in catalog if include_stables or not c["is_stablecoin"]]
         res = filtered[:limit]

@@ -348,12 +348,12 @@ class BinanceAPIClient:
     _mcap_cache_time: float = 0.0
 
     def get_top_by_market_cap(
-        self, limit: int = 10, include_stables: bool = False
+        self, limit: int = 10, include_stables: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Fetch real-time top cryptocurrencies ranked by market capitalization.
-        Queries Binance's official marketing composite market cap dataset.
-        Excludes wrapped tokens and optionally stablecoins.
+        Queries Binance's official marketing composite market cap dataset including major stablecoins (USDT, USDC).
+        Excludes wrapped tokens.
         """
         now = time.time()
         if self._mcap_cache is not None and (now - self._mcap_cache_time) < 300:
@@ -388,7 +388,11 @@ class BinanceAPIClient:
                 price = float(x.get("price") or 0)
                 chg = float(x.get("dayChange") or 0)
                 vol = float(x.get("volume") or 0)
-                if quote != "USDT" or mcap <= 0 or price <= 0:
+                if quote not in {"USDT", "USD"} or mcap <= 0:
+                    continue
+                if price <= 0:
+                    price = 1.0 if asset in stables else 0.0
+                if price <= 0:
                     continue
                 if asset in wrapped or asset in seen:
                     continue

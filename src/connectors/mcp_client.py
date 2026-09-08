@@ -199,8 +199,8 @@ class BinanceMCPClient:
                         },
                         "include_stables": {
                             "type": "boolean",
-                            "description": "Whether to include stablecoins (USDT, USDC, etc.) in rankings (default: false)",
-                            "default": False,
+                            "description": "Whether to include stablecoins (USDT, USDC, etc.) in rankings (default: true)",
+                            "default": True,
                         },
                     },
                 },
@@ -242,7 +242,7 @@ class BinanceMCPClient:
 
         # Priority 1: Market Cap Rankings Query
         if is_mcap_query:
-            include_stables = "stable" in prompt.lower()
+            include_stables = "exclude stable" not in prompt.lower() and "no stable" not in prompt.lower()
             if active_mode == "mock":
                 top_coins = self.mock_provider.get_top_by_market_cap(limit=10, include_stables=include_stables)
             else:
@@ -545,7 +545,7 @@ class BinanceMCPClient:
 
         elif name == "get_top_by_market_cap":
             limit = int(arguments.get("limit", 10))
-            include_stables = bool(arguments.get("include_stables", False))
+            include_stables = bool(arguments.get("include_stables", True))
             from ..config import config
             if config.mode == "mock":
                 return self.mock_provider.get_top_by_market_cap(limit=limit, include_stables=include_stables)
