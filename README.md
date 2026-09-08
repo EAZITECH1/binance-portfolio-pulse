@@ -7,11 +7,11 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests: Passing](https://img.shields.io/badge/tests-15%2F15%20passing-success)](tests/)
-[![X (Twitter) Post](https://img.shields.io/badge/X-Public%20Post%20%26%20Demo-black?logo=x&logoColor=white)](https://x.com/eazitechh/status/2097412347803435075)
+[![X (Twitter) Video](https://img.shields.io/badge/X-Public%20Video%20Demo-black?logo=x&logoColor=white)](https://x.com/eazitechh/status/2097412347803435075)
 
 Binance PortfolioPulse AI is an agentic finance and social intelligence system built for the **Binance Agent OS Mini Hackathon (Track A – Agent Creation, Data Analysis theme)**.
 
-> 📢 **Public Hackathon Announcement & Walkthrough on X (Twitter):**  
+> 🎥 **Public Video Demo & Walkthrough on X (Twitter):**  
 > 🔗 [https://x.com/eazitechh/status/2097412347803435075](https://x.com/eazitechh/status/2097412347803435075)
 
 It bridges the **Binance Model Context Protocol (MCP)** server and Binance Exchange APIs with an autonomous editorial workflow. Whenever a connected agent (Claude, Codex, Cursor, Grok) or creator asks for *"a market update"*, the agent analyzes real-time market-wide momentum, pulls verified Binance market indicators, evaluates risk vulnerabilities, and drafts ready-to-post, Cointelegraph/CoinMarketCap-style tweets and threads.

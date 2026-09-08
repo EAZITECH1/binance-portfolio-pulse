@@ -3,7 +3,7 @@
 **Project Name:** Binance PortfolioPulse AI  
 **Track:** Track A – Agent Creation (Data Analysis Theme)  
 **Submission Deadline:** Sept 8, 2026, 23:59 UTC  
-**Public Post on X (Twitter):** [https://x.com/eazitechh/status/2097412347803435075](https://x.com/eazitechh/status/2097412347803435075)  
+**Public Video Post on X (Twitter):** [https://x.com/eazitechh/status/2097412347803435075](https://x.com/eazitechh/status/2097412347803435075)  
 
 ---
 
@@ -55,6 +55,6 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 - [x] Comprehensive `README.md` with setup, MCP auth walkthrough, and natural language prompt catalog
 - [x] Sample generated market briefs, drafted tweets, and HTML dashboards in `sample_reports/`
 - [x] 60–90 second demo video walkthrough & live demonstration
-- [x] Public submission post & demo video on X: [https://x.com/eazitechh/status/2097412347803435075](https://x.com/eazitechh/status/2097412347803435075)
+- [x] Public demo video post on X (Twitter): [https://x.com/eazitechh/status/2097412347803435075](https://x.com/eazitechh/status/2097412347803435075)
 - [x] Automated test suite passing 100% (15/15 unit tests across `test_analytics.py`, `test_content.py`, `test_price_feeds.py`)
 - [x] Open-source MIT License (`LICENSE`)
