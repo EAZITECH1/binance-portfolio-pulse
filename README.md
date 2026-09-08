@@ -18,6 +18,39 @@ It bridges the **Binance Model Context Protocol (MCP)** server and Binance Excha
 
 ---
 
+## 🎯 The Problem
+
+Crypto users, traders, and content creators are bombarded daily by rapid headlines, fragmented charts, price spikes, and volatile social media noise. Making sense of the market is broken:
+- **Information Fragmentation:** Critical data is scattered across exchange order books, external pricing trackers, wallet balances, and disparate news feeds.
+- **Impulsive Reactions Without Context:** Traders react to localized price pumps without understanding exchange-wide liquidity, underlying market momentum, or their personal exposure.
+- **The Web3 Writer's Dilemma:** Web3 journalists, social media managers, and crypto creators spend hours manually pulling numbers from exchange interfaces, calculating percentage deltas, verifying active ticker status, and formatting tweets—often struggling to keep updates factual, timely, and compliant with Twitter/X character limits.
+
+---
+
+## 💡 The Solution
+
+**Binance PortfolioPulse AI** bridges the **Binance Agent OS Model Context Protocol (MCP)** and live Binance exchange feeds into an autonomous, non-custodial intelligence and editorial engine:
+1. **Evidence-Based Market Synthesis:** Directly queries official Binance MCP tools and composite marketing feeds to track genuine exchange-wide volume ($8B+ USD), calculate true market cap rankings (including $USDT and $USDC), and identify active top movers while filtering out halted or illiquid pairs.
+2. **Quantitative Risk & Portfolio Intelligence:** Continuously audits portfolio health by flagging single-asset concentration (>35%), 24h volatility anomalies, and cash reserve depletion.
+3. **Scenario-Based Decision Support:** Delivers clear, institutional commentary (*"What Happened / What to Watch / Risks"*) to help users navigate market conditions without executing trades or giving financial advice.
+
+---
+
+## ✍️ How PortfolioPulse Empowers Web3 Content Writers & Creators
+
+In fast-paced Web3 media, timing and factual accuracy are everything. PortfolioPulse acts as an **autonomous editorial co-pilot** specifically designed for crypto writers, analysts, and social media managers:
+
+- **⚡ Instant 1-Click Publishing:** Transforms complex, multi-asset Binance spot data and ticker metrics into ready-to-post, Cointelegraph and CoinMarketCap-style updates in seconds.
+- **📏 Strict Twitter/X Character Compliance:** Automatically formats and validates single tweets and 3-part threads (`1/3`, `2/3`, `3/3`) to ensure every post strictly adheres to Twitter's 280-character limit—eliminating manual editing and word trimming.
+- **🛡️ Truthful Editorial Phrasing:** Decouples individual asset movements from broad market trends. For example, if Bitcoin is down -0.3% while selective altcoins rally, the agent truthfully phrases it as *"Bitcoin holds near $78,500 (-0.3%) as selective altcoins decouple"* rather than falsely claiming Bitcoin is "advancing".
+- **🔍 100% Verified On-Exchange Data:** Automatically filters out delisted, halted, or frozen pairs (`status: BREAK`) and leveraged tokens, protecting writers from publishing misleading stats or false pump data.
+- **🧵 Automated Multi-Part Editorial Threads:** Structures posts into proven editorial flows:
+  - **Tweet 1 (The Hook):** Macro headline and market sentiment.
+  - **Tweet 2 (The Data):** Verified top gainers, laggards, and tracked Binance spot volume.
+  - **Tweet 3 (The Takeaway):** Actionable summary, community engagement question, and relevant tickers/hashtags.
+
+---
+
 ## 🌟 Key Features
 
 - 🌐 **Real-Time Market-Wide Intelligence:** Tracks top movers, volume leaders, and macro sentiment across a customizable watchlist (BTC, ETH, SOL, BNB, SUI, NEAR, AVAX, DOGE, PEPE), using 100% genuine live Binance spot exchange data.
