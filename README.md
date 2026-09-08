@@ -296,7 +296,6 @@ binance-portfolio-pulse/
 ├── .gitignore                # Protects secrets, cache, and logs
 ├── LICENSE                   # MIT License
 ├── README.md                 # Project guide and documentation
-├── DEMO_SCRIPT.md            # 60–90s demo video recording storyboard
 ├── SUBMISSION.md             # Hackathon Track A submission & social copy
 ├── requirements.txt          # Optional dependencies (dotenv, requests)
 ├── mcp_config.json           # Model Context Protocol server configuration

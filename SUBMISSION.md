@@ -53,6 +53,6 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 - [x] Full working codebase in clean, modular repository structure
 - [x] Comprehensive `README.md` with setup, MCP auth walkthrough, and natural language prompt catalog
 - [x] Sample generated market briefs, drafted tweets, and HTML dashboards in `sample_reports/`
-- [x] 60–90 second demo video script & storyboard (`DEMO_SCRIPT.md`)
-- [x] Automated test suite passing 100% (12/12 unit tests across `test_analytics.py`, `test_content.py`, `test_price_feeds.py`)
+- [x] 60–90 second demo video walkthrough & live demonstration
+- [x] Automated test suite passing 100% (15/15 unit tests across `test_analytics.py`, `test_content.py`, `test_price_feeds.py`)
 - [x] Open-source MIT License (`LICENSE`)
