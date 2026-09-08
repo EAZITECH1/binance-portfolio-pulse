@@ -204,7 +204,7 @@ Type any of these prompts directly into Claude:
 PortfolioPulse exposes 8 high-level and granular tools conforming to the Model Context Protocol standard:
 
 1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, and market conditions.
-2. `get_top_by_market_cap(limit=10, include_stables=False)`: Live market capitalization rankings, circulating supply, and prices sourced directly from Binance's composite market data endpoint with CoinGecko fallback.
+2. `get_top_by_market_cap(limit=10, include_stables=False)`: Live market capitalization rankings, circulating supply, and prices sourced directly and exclusively from Binance's composite market data endpoint.
 3. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens directly from Binance spot tickers.
 4. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points) from verified Binance exchange data.
 5. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
