@@ -38,6 +38,7 @@ When PortfolioPulse is registered as an MCP server in **Claude Code**, **Claude 
 | *"Create a 3-part thread breaking down today's altcoin action and market data"* | `draft_tweet(topic="market", style="thread")` | Numbered 3-tweet thread (`1/3`, `2/3`, `3/3`) with hook, data, and takeaway. |
 | *"Summarize my Binance portfolio and draft a tweet about it"* | `get_account_balances()` + `draft_tweet(topic="portfolio")` | Comprehensive valuation, risk flags, and an allocation update post. |
 | *"Show me top market movers and volume across the crypto watchlist"* | `get_market_overview()` | Real-time Binance spot prices, 24h gainers/losers, and aggregated quote volume. |
+| *"What are the top 10 coins by market cap?"* | `get_top_by_market_cap(limit=10)` | Live market cap rankings, USD valuations, prices, and 24h change from Binance official feed. |
 
 ---
 
@@ -200,15 +201,16 @@ Type any of these prompts directly into Claude:
 
 ## 🔌 Callable MCP Tools Exposed
 
-PortfolioPulse exposes 7 high-level and granular tools conforming to the Model Context Protocol standard:
+PortfolioPulse exposes 8 high-level and granular tools conforming to the Model Context Protocol standard:
 
 1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, and market conditions.
-2. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens directly from Binance spot tickers.
-3. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points) from verified Binance exchange data.
-4. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
-5. `get_account_balances()`: Fetches spot balances and asset values.
-6. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
-7. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
+2. `get_top_by_market_cap(limit=10, include_stables=False)`: Live market capitalization rankings, circulating supply, and prices sourced directly from Binance's composite market data endpoint with CoinGecko fallback.
+3. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens directly from Binance spot tickers.
+4. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points) from verified Binance exchange data.
+5. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
+6. `get_account_balances()`: Fetches spot balances and asset values.
+7. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
+8. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
 
 ---
 

@@ -343,3 +343,112 @@ class BinanceAPIClient:
             "top_losers": top_losers,
             "assets": items,
         }
+
+    _mcap_cache: Optional[List[Dict[str, Any]]] = None
+    _mcap_cache_time: float = 0.0
+
+    def get_top_by_market_cap(
+        self, limit: int = 10, include_stables: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch real-time top cryptocurrencies ranked by market capitalization.
+        Queries Binance's official marketing market cap dataset with automatic CoinGecko fallback.
+        Excludes wrapped tokens and optionally stablecoins.
+        """
+        now = time.time()
+        if self._mcap_cache is not None and (now - self._mcap_cache_time) < 300:
+            cached = self._mcap_cache
+            filtered = [
+                c for c in cached
+                if include_stables or not c.get("is_stablecoin", False)
+            ]
+            for i, c in enumerate(filtered[:limit]):
+                c["rank"] = i + 1
+            return filtered[:limit]
+
+        stables = {"USDT", "USDC", "USDS", "FDUSD", "DAI", "TUSD", "BUSD", "EUR", "TRY"}
+        wrapped = {"WBTC", "WBETH", "WETH", "WBNB", "WEETH"}
+        results = []
+        seen = set()
+
+        # Method 1: Binance official composite marketing market cap endpoint
+        try:
+            req = urllib.request.Request(
+                "https://www.binance.com/bapi/composite/v1/public/marketing/symbol/list",
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            ctx = get_ssl_context()
+            with urllib.request.urlopen(req, context=ctx, timeout=7) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            items = data.get("data", [])
+            for x in items:
+                asset = str(x.get("baseAsset") or "").upper()
+                quote = str(x.get("quoteAsset") or "").upper()
+                mcap = float(x.get("marketCap") or 0)
+                price = float(x.get("price") or 0)
+                chg = float(x.get("dayChange") or 0)
+                vol = float(x.get("volume") or 0)
+                if quote != "USDT" or mcap <= 0 or price <= 0:
+                    continue
+                if asset in wrapped or asset in seen:
+                    continue
+                seen.add(asset)
+                fmt_mcap = f"${mcap/1e12:.2f}T" if mcap >= 1e12 else f"${mcap/1e9:.2f}B" if mcap >= 1e9 else f"${mcap/1e6:.1f}M"
+                results.append({
+                    "asset": asset,
+                    "name": x.get("name") or asset,
+                    "price": price,
+                    "market_cap_usd": mcap,
+                    "market_cap_formatted": fmt_mcap,
+                    "change_24h_pct": round(chg, 2),
+                    "volume_24h_usd": vol,
+                    "cmc_rank": x.get("rank"),
+                    "is_stablecoin": asset in stables,
+                })
+        except Exception as e:
+            logger.warning(f"Binance market cap API query failed: {e}. Trying fallback provider...")
+
+        # Method 2: Fallback to CoinGecko public market cap API if needed
+        if not results:
+            try:
+                cg_url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=30&page=1&sparkline=false"
+                req = urllib.request.Request(cg_url, headers={"User-Agent": "Mozilla/5.0"})
+                ctx = get_ssl_context()
+                with urllib.request.urlopen(req, context=ctx, timeout=7) as resp:
+                    cg_items = json.loads(resp.read().decode("utf-8"))
+                for x in cg_items:
+                    asset = str(x.get("symbol") or "").upper()
+                    mcap = float(x.get("market_cap") or 0)
+                    price = float(x.get("current_price") or 0)
+                    chg = float(x.get("price_change_percentage_24h") or 0)
+                    vol = float(x.get("total_volume") or 0)
+                    if mcap <= 0 or price <= 0 or asset in wrapped or asset in seen:
+                        continue
+                    seen.add(asset)
+                    fmt_mcap = f"${mcap/1e12:.2f}T" if mcap >= 1e12 else f"${mcap/1e9:.2f}B" if mcap >= 1e9 else f"${mcap/1e6:.1f}M"
+                    results.append({
+                        "asset": asset,
+                        "name": x.get("name") or asset,
+                        "price": price,
+                        "market_cap_usd": mcap,
+                        "market_cap_formatted": fmt_mcap,
+                        "change_24h_pct": round(chg, 2),
+                        "volume_24h_usd": vol,
+                        "cmc_rank": x.get("market_cap_rank"),
+                        "is_stablecoin": asset in stables,
+                    })
+            except Exception as e2:
+                logger.error(f"Fallback CoinGecko query also failed: {e2}")
+
+        results.sort(key=lambda x: x["market_cap_usd"], reverse=True)
+        self._mcap_cache = results
+        self._mcap_cache_time = now
+
+        filtered = [
+            c for c in results
+            if include_stables or not c.get("is_stablecoin", False)
+        ]
+        final_list = filtered[:limit]
+        for i, c in enumerate(final_list):
+            c["rank"] = i + 1
+        return final_list

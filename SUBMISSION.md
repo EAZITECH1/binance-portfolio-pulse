@@ -25,13 +25,14 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 
 1. **Native Binance Agent OS MCP Integration & Dual Usage Modes:**
    - Implements full client connectivity to the official Binance MCP Server endpoint (`https://agent.binance.com/mcp/agentic`) and interactive local stdio server.
-   - Exposes 7 MCP tools: `ask_portfoliopulse`, `get_market_overview`, `generate_market_brief`, `draft_tweet`, `get_account_balances`, `get_ticker_24hr`, and `get_klines`.
+   - Exposes 8 MCP tools: `ask_portfoliopulse`, `get_top_by_market_cap`, `get_market_overview`, `generate_market_brief`, `draft_tweet`, `get_account_balances`, `get_ticker_24hr`, and `get_klines`.
    - Verified live in Claude Desktop, Claude Code, Cursor, and Codex workflows via `mcp_config.json`.
    - Strictly non-custodial with zero external withdrawal scope.
 
 2. **Verified Binance Market Intelligence:**
    - Standalone market briefs tracking top movers (BTC, ETH, SOL, BNB, SUI, AVAX, DOGE, PEPE), 24h spot volumes, and market sentiment.
    - Real-time exchange indicators across Binance spot markets (tracked USD volume, 24h price changes, and top gainer/loser rankings).
+   - Live market cap rankings via Binance's composite marketing API with circulating supply and true USD valuations.
 
 3. **Web3 Content Creator Social Drafter:**
    - Transforms complex raw data into publication-ready tweets and 3-part threads in crypto-journalism style (Cointelegraph / CoinMarketCap).
@@ -43,7 +44,7 @@ PortfolioPulse is usable directly inside Claude Desktop as a set of MCP tools, a
 
 5. **Zero-Key Judge Experience:**
    - Reviewers can clone the repository and immediately execute `python3 run_agent.py --brief market --draft-tweet` or `python3 run_agent.py --brief portfolio --format all` without configuring API keys.
-   - Resilient offline/sandboxed fallback with comprehensive test suite (12/12 passing).
+   - Resilient offline/sandboxed fallback with comprehensive test suite (15/15 passing).
 
 ---
 

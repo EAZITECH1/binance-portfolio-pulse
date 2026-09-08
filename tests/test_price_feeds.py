@@ -42,7 +42,8 @@ class TestMarketOverview(unittest.TestCase):
         self.assertNotIn("get_onchain_snapshot", tool_names)
         self.assertIn("get_market_overview", tool_names)
         self.assertIn("generate_market_brief", tool_names)
-        self.assertEqual(len(tools), 7)
+        self.assertIn("get_top_by_market_cap", tool_names)
+        self.assertEqual(len(tools), 8)
 
     def test_market_overview_drops_unknown_symbols(self):
         """Verify unknown or unlisted tokens like FAKECOIN are dropped and not fabricated as top gainers."""
@@ -54,6 +55,15 @@ class TestMarketOverview(unittest.TestCase):
         self.assertNotIn("FAKECOIN", asset_names)
         gainer_assets = [g["asset"] for g in overview["top_gainers"]]
         self.assertNotIn("FAKECOIN", gainer_assets)
+
+    def test_get_top_by_market_cap(self):
+        """Verify get_top_by_market_cap returns ranked coins with market cap data."""
+        top = self.mock_provider.get_top_by_market_cap(limit=5)
+        self.assertEqual(len(top), 5)
+        self.assertEqual(top[0]["rank"], 1)
+        self.assertEqual(top[0]["asset"], "BTC")
+        self.assertIn("market_cap_formatted", top[0])
+        self.assertGreater(top[0]["market_cap_usd"], 0)
 
 
 if __name__ == "__main__":
