@@ -202,32 +202,74 @@ class BinanceAPIClient:
 
     def get_market_overview(self, watchlist: Optional[List[str]] = None) -> Dict[str, Any]:
         """
-        Fetch real-time market overview across a watchlist of assets using live Binance 24h tickers.
-        Ranks top gainers, top losers, total quote volume, and computes live market sentiment.
+        Fetch real-time market overview across Binance spot markets.
+        If watchlist is specified, evaluates those specific assets.
+        If watchlist is None, evaluates exchange-wide liquid USDT spot pairs
+        to identify the TRUE top gainers, top losers, total volume, and sentiment.
         """
-        if not watchlist:
-            watchlist = ["BTC", "ETH", "SOL", "BNB", "SUI", "NEAR", "AVAX", "DOGE", "LINK", "ARB", "PEPE"]
-
-        symbols = [f"{asset.upper()}USDT" for asset in watchlist]
         raw_tickers = []
-        try:
-            symbols_param = json.dumps(symbols, separators=(",", ":"))
-            data = self._request("GET", "/api/v3/ticker/24hr", {"symbols": symbols_param})
-            if isinstance(data, list):
-                raw_tickers = data
-        except Exception:
-            for sym in symbols:
-                try:
-                    t = self.get_ticker_24hr(sym)
-                    raw_tickers.append(t)
-                except Exception:
-                    pass
+        is_exchange_wide = not watchlist
+
+        if watchlist:
+            symbols = [f"{asset.upper()}USDT" for asset in watchlist]
+            try:
+                symbols_param = json.dumps(symbols, separators=(",", ":"))
+                data = self._request("GET", "/api/v3/ticker/24hr", {"symbols": symbols_param})
+                if isinstance(data, list):
+                    raw_tickers = data
+            except Exception:
+                for sym in symbols:
+                    try:
+                        t = self.get_ticker_24hr(sym)
+                        raw_tickers.append(t)
+                    except Exception:
+                        pass
+        else:
+            # Exchange-wide discovery: scan all liquid USDT pairs for genuine top movers
+            benchmark_symbols = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"}
+            try:
+                all_tickers = self.get_all_tickers_24hr()
+                for t in all_tickers:
+                    sym = t.get("symbol", "")
+                    if not sym.endswith("USDT"):
+                        continue
+                    # Exclude leveraged/synthetic tokens (UP/DOWN/BEAR/BULL)
+                    if any(sym.endswith(x) for x in ["UPUSDT", "DOWNUSDT", "BEARUSDT", "BULLUSDT"]):
+                        continue
+                    try:
+                        price = float(t.get("lastPrice", 0.0))
+                        q_vol = float(t.get("quoteVolume", 0.0))
+                        if price <= 0:
+                            continue
+                        # Require at least $1,000,000 in 24h quote volume to filter illiquid pairs,
+                        # but always guarantee core benchmark tickers are tracked
+                        if q_vol >= 1_000_000 or sym in benchmark_symbols:
+                            raw_tickers.append(t)
+                    except (ValueError, TypeError):
+                        continue
+
+                # Fallback if volume filter was overly restrictive
+                if len(raw_tickers) < 10:
+                    raw_tickers = [
+                        t for t in all_tickers
+                        if t.get("symbol", "").endswith("USDT")
+                        and not any(t.get("symbol", "").endswith(x) for x in ["UPUSDT", "DOWNUSDT"])
+                    ]
+            except Exception as e:
+                logger.warning(f"Exchange-wide ticker fetch failed: {e}. Falling back to default liquid assets.")
+                fallback_symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "SUIUSDT", "NEARUSDT", "AVAXUSDT", "DOGEUSDT", "LINKUSDT", "ARBUSDT", "PEPEUSDT"]
+                for sym in fallback_symbols:
+                    try:
+                        t = self.get_ticker_24hr(sym)
+                        raw_tickers.append(t)
+                    except Exception:
+                        pass
 
         items = []
         total_vol_usd = 0.0
         for t in raw_tickers:
             sym = t.get("symbol", "")
-            asset = sym.replace("USDT", "")
+            asset = sym[:-4] if sym.endswith("USDT") else sym
             price = float(t.get("lastPrice", 0.0))
             change_pct = float(t.get("priceChangePercent", 0.0))
             quote_vol = float(t.get("quoteVolume", 0.0))
@@ -244,9 +286,10 @@ class BinanceAPIClient:
             })
 
         sorted_by_change = sorted(items, key=lambda x: x["priceChangePercent"], reverse=True)
-        top_gainers = sorted_by_change[:3] if sorted_by_change else []
-        top_losers = sorted_by_change[-2:] if len(sorted_by_change) >= 2 else []
+        top_gainers = sorted_by_change[:5] if sorted_by_change else []
+        top_losers = sorted_by_change[-5:][::-1] if len(sorted_by_change) >= 5 else (sorted_by_change[-2:][::-1] if len(sorted_by_change) >= 2 else [])
 
+        # For market sentiment: compute average change of tracked liquid assets
         avg_change = sum(x["priceChangePercent"] for x in items) / len(items) if items else 0.0
         if avg_change > 3.0:
             sentiment = "BULLISH_EXPANSION"

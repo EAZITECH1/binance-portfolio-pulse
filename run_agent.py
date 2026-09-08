@@ -302,7 +302,7 @@ def generate_portfolio_report(
 
 
 def generate_market_brief_report(
-    mode: str = "mock",
+    mode: str = None,
     output_dir: str = "reports",
     watchlist: List[str] = None,
     draft_tweet: bool = False,
@@ -312,13 +312,14 @@ def generate_market_brief_report(
     Generates a standalone market intelligence brief + optional tweet draft.
     """
     import json
+    active_mode = mode or config.mode
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prefix = f"binance_market_brief_{date_str}"
 
-    logger.info(f"Generating Market Intelligence Brief in [{mode.upper()}] mode...")
-    brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=mode)
+    logger.info(f"Generating Market Intelligence Brief in [{active_mode.upper()}] mode...")
+    brief = MarketBriefGenerator.generate(watchlist=watchlist, mode=active_mode)
 
     generated_files = {}
 

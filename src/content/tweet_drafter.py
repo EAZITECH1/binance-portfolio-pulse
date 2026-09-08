@@ -179,25 +179,44 @@ class TweetDrafter:
             runners_str = f"${top_asset['asset']} ({top_asset['priceChangePercent']:+.1f}%)"
             movers_lines = f"• $BTC: ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%)"
 
-        # Dynamically tailor hook and takeaway to real market sentiment
-        is_bullish = btc_c >= 1.0 or "BULL" in sentiment or sentiment == "MODERATE_RISK_ON"
-        is_bearish = btc_c <= -1.0 or "BEAR" in sentiment or "PULLBACK" in sentiment
+        # Bitcoin-specific verb: accurately reflects BTC's own 24h direction
+        if btc_c >= 1.0:
+            btc_action = f"advances to ${btc_p:,.0f} (+{btc_c:.1f}%)"
+        elif btc_c > 0.0:
+            btc_action = f"edges up to ${btc_p:,.0f} (+{btc_c:.1f}%)"
+        elif btc_c > -1.0:
+            btc_action = f"holds near ${btc_p:,.0f} ({btc_c:.1f}%)"
+        elif btc_c > -3.0:
+            btc_action = f"slips to ${btc_p:,.0f} ({btc_c:.1f}%)"
+        else:
+            btc_action = f"pulls back to ${btc_p:,.0f} ({btc_c:.1f}%)"
 
-        if is_bullish:
-            t1_hook = f"🚨 MARKET PULSE: Crypto pushes higher as Bitcoin holds ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
+        if pos_movers and btc_c < 0.0:
+            market_backdrop = "as selective altcoins decouple."
+        elif pos_movers and btc_c >= 1.0:
+            market_backdrop = "with momentum building across spot pairs."
+        elif pos_movers:
+            market_backdrop = "with selective rotation underway."
+        elif btc_c < -1.0:
+            market_backdrop = "amid broad localized pullback."
+        else:
+            market_backdrop = "in consolidating spot markets."
+
+        single_lead = f"⚡ MARKET UPDATE: Bitcoin {btc_action} {market_backdrop}\n\n"
+
+        # Thread narrative hooks
+        if btc_c >= 0.5:
+            t1_hook = f"🚨 MARKET PULSE: Crypto pushes higher as Bitcoin reaches ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
             t1_sub = f"Selective altcoins are leading the charge, with {runners_str} seeing spot demand.\n\n"
-            t3_takeaway = "💡 TAKEAWAY: Capital rotating into high-momentum spot pairs while BTC defends support."
-            single_lead = f"⚡ MARKET UPDATE: Bitcoin advances to ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) with momentum building.\n\n"
-        elif is_bearish:
+            t3_takeaway = "💡 TAKEAWAY: Capital rotating into high-momentum spot pairs while BTC leads market structure."
+        elif btc_c <= -1.0:
             t1_hook = f"🚨 MARKET PULSE: Crypto faces pullback as Bitcoin tests ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
             t1_sub = f"Caution across majors today, though {runners_str} displays resilience.\n\n" if pos_movers else "Broad market caution prevails as traders de-risk into stablecoin buffers.\n\n"
             t3_takeaway = "💡 TAKEAWAY: Defensive posture across desks as participants monitor BTC range support."
-            single_lead = f"⚡ MARKET UPDATE: Bitcoin cools to ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) amid localized pullback.\n\n"
         else:
             t1_hook = f"🚨 MARKET PULSE: Crypto consolidates with Bitcoin steady near ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%).\n\n"
             t1_sub = f"Range-bound action dominates today, while {runners_str} highlights selective rotation.\n\n"
             t3_takeaway = "💡 TAKEAWAY: Selective rotation underway as traders await directional macro breakout."
-            single_lead = f"⚡ MARKET UPDATE: Bitcoin ranges at ${btc_p:,.0f} ({btc_sign}{btc_c:.1f}%) in consolidating markets.\n\n"
 
         if style == "thread":
             t1 = (

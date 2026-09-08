@@ -87,6 +87,35 @@ class TestContentAndMarketBrief(unittest.TestCase):
             self.assertIn(f"({i+1}/3)", t)
         self.assertIn("$SOL", draft.tweets[2])
 
+    def test_market_tweet_negative_btc_sentiment_phrasing(self):
+        """Verify that when BTC is down (-0.3%), the tweet drafter never says 'advances'."""
+        mock_brief_dict = {
+            "headline": "Market Choppiness: BTC Tests $78,622",
+            "sentiment": "MODERATE_RISK_ON",
+            "metrics": {
+                "btc_price": 78622.0,
+                "btc_change_24h": -0.3,
+                "total_tracked_volume_usd": 7800000000.0,
+                "average_24h_change_pct": 1.2,
+            },
+            "top_gainers": [
+                {"asset": "SOPH", "priceChangePercent": 34.0},
+                {"asset": "QKC", "priceChangePercent": 27.3},
+            ],
+            "top_losers": [
+                {"asset": "NFP", "priceChangePercent": -65.8},
+            ],
+            "key_points": ["BTC consolidating", "Selective alts rallying"],
+        }
+        draft = TweetDrafter.draft_market_tweet(mock_brief_dict, style="single")
+        self.assertEqual(draft.total_tweets, 1)
+        tweet = draft.tweets[0]
+        self.assertLessEqual(len(tweet), 280)
+        self.assertNotIn("advances", tweet.lower())
+        self.assertIn("holds near", tweet.lower())
+        self.assertIn("$SOPH", tweet)
+        self.assertIn("$QKC", tweet)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -226,28 +226,79 @@ class BinanceMCPClient:
             # Real Live Market Data Mode (Binance API or MCP)
             has_keys = bool(self.api_client.api_key and self.api_client.api_secret)
 
+            is_explicit_portfolio_query = any(w in prompt.lower() for w in [
+                "my portfolio", "my balance", "my holding", "my wallet", "my pnl",
+                "my account", "my risk", "my token", "my asset"
+            ])
+            is_tweet_query = any(w in prompt.lower() for w in ["tweet", "thread", "post", "x.com", "twitter"])
+            is_market_query = any(w in prompt.lower() for w in [
+                "market", "brief", "briefing", "bitcoin", "btc", "eth", "solana", "sol",
+                "crypto", "trend", "altcoin", "mover", "gainer", "loser", "action"
+            ])
+
             if not has_keys:
-                # Provide real live Binance market data without credentials
+                from ..content.tweet_drafter import TweetDrafter
                 brief = MarketBriefGenerator.generate(watchlist=watchlist, mode="api")
-                answer = (
-                    f"🔐 Portfolio Authentication Notice:\n"
-                    f"To analyze your personal wallet holdings, risk exposure, and P&L with real account data, "
-                    f"please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in your .env file.\n\n"
-                    f"🌐 Real-Time Binance Market Context:\n"
-                    f"• {brief.headline}\n"
-                    f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
-                    f"• Tracked 24h Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n\n"
-                    f"📌 Live Market Takeaways:\n" +
-                    "\n".join(f"   - {kp}" for kp in brief.key_points[:3]) +
-                    f"\n\n💡 Tip: To inspect live market movers and trends without credentials, run:\n"
-                    f"   python3 run_agent.py --brief market"
-                )
-                return {
-                    "answer": answer,
-                    "prompt": prompt,
-                    "market_brief": brief.to_dict(),
-                    "requires_credentials": True,
-                }
+
+                if is_tweet_query:
+                    style = "thread" if "thread" in prompt.lower() else "single"
+                    draft = TweetDrafter.draft_market_tweet(brief, style=style)
+                    answer = (
+                        f"🐦 Drafted Publication-Ready Market Tweet ({style.upper()}):\n\n"
+                        f"{draft.formatted_preview}\n\n"
+                        f"📊 Live Binance Market Reference:\n"
+                        f"• {brief.headline}\n"
+                        f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
+                        f"• Tracked 24h Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD"
+                    )
+                    return {
+                        "query": prompt,
+                        "answer": answer,
+                        "market_brief": brief.to_dict(),
+                        "drafted_tweet": draft.to_dict(),
+                        "requires_credentials": False,
+                    }
+                elif not is_explicit_portfolio_query:
+                    # User asked a market question - answer directly with live Binance data
+                    gainers_str = ", ".join(f"${g['asset']} (+{g['priceChangePercent']:.1f}%)" for g in brief.top_gainers[:3])
+                    losers_str = ", ".join(f"${l['asset']} ({l['priceChangePercent']:.1f}%)" for l in brief.top_losers[:3]) if brief.top_losers else "None"
+                    answer = (
+                        f"🌐 Real-Time Binance Market Intelligence:\n\n"
+                        f"• Headline: {brief.headline}\n"
+                        f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
+                        f"• Tracked 24h Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n"
+                        f"• Top Gainers: {gainers_str}\n"
+                        f"• Top Losers: {losers_str}\n\n"
+                        f"📌 Live Market Observations:\n" +
+                        "\n".join(f"   - {kp}" for kp in brief.key_points)
+                    )
+                    return {
+                        "query": prompt,
+                        "answer": answer,
+                        "market_brief": brief.to_dict(),
+                        "requires_credentials": False,
+                    }
+                else:
+                    # Explicit personal portfolio query without credentials
+                    answer = (
+                        f"🔐 Portfolio Authentication Notice:\n"
+                        f"To analyze your personal wallet holdings, risk exposure, and P&L with real account data, "
+                        f"please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in your .env file.\n\n"
+                        f"🌐 Real-Time Binance Market Context:\n"
+                        f"• {brief.headline}\n"
+                        f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
+                        f"• Tracked 24h Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n\n"
+                        f"📌 Live Market Takeaways:\n" +
+                        "\n".join(f"   - {kp}" for kp in brief.key_points[:3]) +
+                        f"\n\n💡 Tip: To inspect live market movers and trends without credentials, run:\n"
+                        f"   python3 run_agent.py --brief market"
+                    )
+                    return {
+                        "query": prompt,
+                        "answer": answer,
+                        "market_brief": brief.to_dict(),
+                        "requires_credentials": True,
+                    }
 
             # User provided real API credentials - fetch genuine balances
             raw = self.api_client.get_account_balances()
@@ -304,17 +355,36 @@ class BinanceMCPClient:
         )
         brief = MarketBriefGenerator.generate(watchlist=watchlist, mode="mock" if active_mode == "mock" else "api")
 
-        is_market_query = any(w in prompt.lower() for w in ["market", "brief", "briefing", "bitcoin", "solana", "btc", "eth", "crypto", "trend", "altcoin"])
+        is_tweet_query = any(w in prompt.lower() for w in ["tweet", "thread", "post", "x.com", "twitter"])
+        is_market_query = any(w in prompt.lower() for w in [
+            "market", "brief", "briefing", "bitcoin", "solana", "btc", "eth", "crypto",
+            "trend", "altcoin", "mover", "gainer", "loser", "action"
+        ])
 
-        if is_market_query and summary.total_value_usd <= 0:
+        if is_tweet_query:
+            from ..content.tweet_drafter import TweetDrafter
+            style = "thread" if "thread" in prompt.lower() else "single"
+            if any(w in prompt.lower() for w in ["portfolio", "my wallet", "holdings"]) and summary.total_value_usd > 0:
+                draft = TweetDrafter.draft_portfolio_tweet(summary, ai_summary, style=style)
+            else:
+                draft = TweetDrafter.draft_market_tweet(brief, style=style)
             answer = (
-                f"🌐 Live Binance Market Intelligence Briefing:\n\n"
+                f"🐦 Ready-to-Post Tweet ({style.upper()}):\n\n"
+                f"{draft.formatted_preview}\n\n"
+                f"📊 Market Context: {brief.headline}"
+            )
+        elif is_market_query and (summary.total_value_usd <= 0 or not any(w in prompt.lower() for w in ["portfolio", "my ", "holdings", "risk", "pnl"])):
+            gainers_str = ", ".join(f"${g['asset']} (+{g['priceChangePercent']:.1f}%)" for g in brief.top_gainers[:3])
+            losers_str = ", ".join(f"${l['asset']} ({l['priceChangePercent']:.1f}%)" for l in brief.top_losers[:3]) if brief.top_losers else "None"
+            answer = (
+                f"🌐 Live Binance Market Intelligence:\n\n"
                 f"• Headline: {brief.headline}\n"
                 f"• Sentiment: {brief.sentiment.replace('_', ' ')}\n"
-                f"• 24h Tracked Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n\n"
+                f"• 24h Tracked Volume: ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} USD\n"
+                f"• Top Gainers: {gainers_str}\n"
+                f"• Top Losers: {losers_str}\n\n"
                 f"📌 Key Market Observations:\n" +
-                "\n".join(f"   - {kp}" for kp in brief.key_points) +
-                f"\n\n💼 Portfolio Status: Your Binance Spot account currently has no active funded token holdings ($0.00)."
+                "\n".join(f"   - {kp}" for kp in brief.key_points)
             )
         else:
             answer = (
