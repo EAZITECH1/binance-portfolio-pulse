@@ -76,6 +76,7 @@ When PortfolioPulse is registered as an MCP server in **Claude Code**, **Claude 
 | *"Summarize my Binance portfolio and draft a tweet about it"* | `get_account_balances()` + `draft_tweet(topic="portfolio")` | Comprehensive valuation, risk flags, and an allocation update post. |
 | *"Show me top market movers and volume across the crypto watchlist"* | `get_market_overview()` | Real-time Binance spot prices, 24h gainers/losers, and aggregated quote volume. |
 | *"What are the top 10 coins by market cap?"* | `get_top_by_market_cap(limit=10)` | Live market cap rankings, USD valuations, prices, and 24h change from Binance official feed. |
+| *"Why is ETH moving today, and what should I watch?"* | `get_ticker_24hr("ETHUSDT")` + `ask_portfoliopulse()` | Real-time ETH spot metrics, 24h trading range, Binance volume, why it's moving, and key levels to watch. |
 
 ---
 
@@ -224,7 +225,7 @@ Add the following entry under `mcpServers` (replace `/ABSOLUTE/PATH/TO/binance-p
 Completely quit Claude Desktop (**Cmd + Q** on macOS or **File > Exit** on Windows) and relaunch the app.
 
 ### Step 4: Verify MCP tool discovery
-Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 7 exposed tools active and ready!
+Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 8 exposed tools active and ready!
 
 ### Step 5: Try these prompt examples in Claude Desktop
 Type any of these prompts directly into Claude:
@@ -233,6 +234,7 @@ Type any of these prompts directly into Claude:
 2. 💬 *"What is my highest risk asset in PortfolioPulse?"*
 3. 💬 *"Analyze today's top gainers and market overview on Binance."*
 4. 💬 *"Create a 3-part Twitter thread breaking down today's altcoin action and Binance spot volume."*
+5. 💬 *"Why is ETH moving today, and what should I watch?"*
 
 ---
 
@@ -259,6 +261,7 @@ When running outside Claude Desktop, PortfolioPulse operates as a powerful stand
 # 1. Ask natural language questions via CLI
 python3 run_agent.py --ask "What is my highest risk asset?"
 python3 run_agent.py --ask "Give me a quick market summary and draft a tweet"
+python3 run_agent.py --ask "Why is ETH moving today, and what should I watch?"
 
 # 2. Market Intelligence & Social Content
 python3 run_agent.py --brief market                                         # Market brief

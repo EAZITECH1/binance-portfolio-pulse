@@ -290,7 +290,63 @@ class BinanceMCPClient:
                 "requires_credentials": False,
             }
 
-        # Priority 3: General Market Intelligence Query
+        # Priority 3: Asset-Specific Movement / Driver Query (e.g. "Why is ETH moving today, and what should I watch?")
+        import re
+        asset_match = re.search(r'\b(eth|ethereum|sol|solana|btc|bitcoin|bnb|xrp|doge|ada|avax|sui|near|link)\b', prompt.lower())
+        is_asset_driver_query = bool(asset_match and any(w in prompt.lower() for w in ["why", "moving", "driving", "watch", "driver", "today", "level"]))
+
+        if is_asset_driver_query and not is_explicit_portfolio and not is_tweet_query:
+            token_raw = asset_match.group(1).upper()
+            aliases = {"ETHEREUM": "ETH", "SOLANA": "SOL", "BITCOIN": "BTC"}
+            target_asset = aliases.get(token_raw, token_raw)
+            sym = f"{target_asset}USDT"
+            
+            ticker = None
+            if active_mode == "mock":
+                ticker = self.mock_provider.get_ticker_24hr(sym)
+            else:
+                try:
+                    ticker = self.api_client.get_ticker_24hr(sym)
+                except Exception:
+                    pass
+            
+            if ticker:
+                last_price = float(ticker.get("lastPrice") or 0)
+                chg_pct = float(ticker.get("priceChangePercent") or 0)
+                high_24h = float(ticker.get("highPrice") or 0)
+                low_24h = float(ticker.get("lowPrice") or 0)
+                q_vol = float(ticker.get("quoteVolume") or 0)
+                brief = MarketBriefGenerator.generate(watchlist=watchlist, mode="mock" if active_mode == "mock" else "api")
+                chg_sign = "+" if chg_pct >= 0 else ""
+                vol_fmt = f"${q_vol/1e9:.2f}B" if q_vol >= 1e9 else f"${q_vol/1e6:.1f}M"
+                
+                answer = (
+                    f"🌐 Binance PortfolioPulse: {target_asset} Market Analysis\n\n"
+                    f"📊 Live Price & 24h Spot Metrics:\n"
+                    f"• Current Price: ${last_price:,.2f} ({chg_sign}{chg_pct:.2f}%)\n"
+                    f"• 24h Trading Range: ${low_24h:,.2f} – ${high_24h:,.2f}\n"
+                    f"• 24h Binance Spot Volume: {vol_fmt} USD\n"
+                    f"• Broad Market Sentiment: {brief.sentiment.replace('_', ' ')}\n\n"
+                    f"🔍 Why is {target_asset} Moving Today?\n"
+                    f"• Price Action: {target_asset} is trading with {chg_sign}{chg_pct:.2f}% daily momentum on strong Binance spot liquidity ({vol_fmt} USD).\n"
+                    f"• Market Regime: Broader market conditions reflect {brief.sentiment.replace('_', ' ')} sentiment with ${brief.metrics.get('total_tracked_volume_usd', 0):,.0f} in tracked exchange volume.\n"
+                    f"• Market Context: {brief.headline}\n\n"
+                    f"🎯 What Should You Watch?\n"
+                    f"• Key Resistance: 24h High at ${high_24h:,.2f} — a sustained breakout confirms ongoing upside continuation.\n"
+                    f"• Critical Support: 24h Low at ${low_24h:,.2f} — defending this level maintains structural support.\n"
+                    f"• Volume Dynamics: Monitor whether Binance spot volume sustains above {vol_fmt} to validate trend strength.\n"
+                    f"• Macro Sentiment: Track Bitcoin correlation as market-wide liquidity shapes altcoin momentum."
+                )
+                return {
+                    "query": prompt,
+                    "answer": answer,
+                    "target_asset": target_asset,
+                    "ticker": ticker,
+                    "market_brief": brief.to_dict(),
+                    "requires_credentials": False,
+                }
+
+        # Priority 4: General Market Intelligence Query
         if is_market_query and not is_explicit_portfolio:
             brief = MarketBriefGenerator.generate(watchlist=watchlist, mode="mock" if active_mode == "mock" else "api")
             gainers_str = ", ".join(f"${g['asset']} (+{g['priceChangePercent']:.1f}%)" for g in brief.top_gainers[:3])
