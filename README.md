@@ -192,12 +192,24 @@ PortfolioPulse is designed to be versatile: you can interact with it conversatio
 
 ---
 
-## 🖥️ Claude Desktop Setup (Step-by-Step)
+## 🖥️ Claude Desktop Setup
 
 Connect PortfolioPulse to **Claude Desktop** to chat directly with your portfolio and market intelligence engine using natural language.
 
-### Step 1: Locate your Claude Desktop configuration file
-Find or create `claude_desktop_config.json` on your system:
+### ⚡ Method A: 1-Click Auto-Installer (Recommended)
+Run the automated installer script to detect your OS and register PortfolioPulse in Claude Desktop automatically:
+
+```bash
+python3 install_mcp.py
+```
+*(To remove later, simply run `python3 install_mcp.py --uninstall`)*
+
+Then completely quit Claude Desktop (**Cmd + Q** on macOS or **File > Exit** on Windows) and relaunch the app.
+
+---
+
+### 🛠️ Method B: Manual Configuration
+If you prefer configuring manually, find or create `claude_desktop_config.json` on your system:
 
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -320,10 +332,11 @@ Run the test suite with Python's built-in `unittest` runner:
 python3 -m unittest discover -s tests -v
 ```
 
-**13 unit tests covering:**
+**15 unit tests covering:**
 - Character count validation on single tweets (`<= 280` chars)
 - Thread sequence validation (`1/3`, `2/3`, `3/3`)
 - Watchlist market overview, top movers ranking, and volume aggregation
+- Live market cap discovery and ranking (including USDT and USDC)
 - Market brief synthesis independent of portfolio data
 - Portfolio valuation, asset allocation, and concentration risk thresholds
 
@@ -340,6 +353,7 @@ binance-portfolio-pulse/
 ├── SUBMISSION.md             # Hackathon Track A submission & social copy
 ├── requirements.txt          # Optional dependencies (dotenv, requests)
 ├── mcp_config.json           # Model Context Protocol server configuration
+├── install_mcp.py            # 1-click Claude Desktop MCP auto-installer
 ├── run_agent.py              # Central CLI and recurring scheduling daemon
 ├── src/
 │   ├── config.py             # Configuration loader with fallback
