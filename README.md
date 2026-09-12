@@ -140,39 +140,40 @@ python3 run_agent.py --ask "Give me an executive market briefing on Bitcoin and 
 #    python3 run_agent.py --brief portfolio --format all --output-dir reports/
 ```
 
-### Market Brief & Tweet Output Example:
+### Market Brief & Tweet Output Example (Live Binance Exchange Data):
 
 ```text
-[2026-09-07 03:19:14] [INFO ] Generating Market Intelligence Brief in [MOCK] mode...
-[2026-09-07 03:19:14] [INFO ] Market brief markdown -> sample_reports/binance_market_brief_2026-09-07.md
-[2026-09-07 03:19:14] [INFO ] Drafted market tweet saved -> sample_reports/binance_market_brief_2026-09-07_tweet.md
+[2026-09-12 03:16:11] [INFO ] Generating Market Intelligence Brief in [API] mode...
+[2026-09-12 03:16:19] [INFO ] Market brief markdown -> reports/binance_market_brief_2026-09-12.md
+[2026-09-12 03:16:19] [INFO ] Market brief json -> reports/binance_market_brief_2026-09-12.json
+[2026-09-12 03:16:19] [INFO ] Drafted market tweet saved -> reports/binance_market_brief_2026-09-12_tweet.md
 
 ----------------------------------------------------------------
  🐦 DRAFTED MARKET TWEET (THREAD - 3 post(s)):
 ----------------------------------------------------------------
-[1/3] (223/280 chars):
-🚨 MARKET PULSE: Crypto pushes higher as Bitcoin holds steady above $63,450 (+3.1%).
+[1/3] (227/280 chars):
+🚨 MARKET PULSE: Crypto consolidates with Bitcoin steady near $77,306 (+0.5%).
 
-Selective altcoins are leading the charge today, with SUI and $SOL seeing heavy spot inflows.
+Range-bound action dominates today, while $LSK (+51.2%) & $VTHO (+24.9%) highlights selective rotation.
 
 Here's what you need to know today 🧵👇 (1/3)
 
-[2/3] (203/280 chars):
+[2/3] (204/280 chars):
 📊 KEY MOVERS & BINANCE SPOT ACTIVITY:
 
-• $SOL: $164.80 (+9.4%)
-• $SUI: +14.7%
-• Tracked 24h Volume: $2.5B USD
-• Watchlist Avg Movement: +2.35%
+• $LSK: +51.2%
+• $VTHO: +24.9%
+• Tracked 24h Volume: $9.6B USD
+• Watchlist Avg Movement: +1.89%
 
-Spot order flow shows sustained liquidity across leading pairs. (2/3)
+Spot order flow shows sustained liquidity across active pairs. (2/3)
 
-[3/3] (199/280 chars):
-💡 TAKEAWAY: Capital is rotating into high-beta layer-1s while BTC builds liquidity above support.
+[3/3] (186/280 chars):
+💡 TAKEAWAY: Selective rotation underway as traders await directional macro breakout.
 
-Are you taking profits into stables or riding the momentum?
+Are you accumulating dips into stables or waiting for confirmation?
 
-#Bitcoin #Solana #Crypto #Binance (3/3)
+#Bitcoin #Crypto #Binance (3/3)
 ----------------------------------------------------------------
 ```
 
