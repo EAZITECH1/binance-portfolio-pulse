@@ -75,9 +75,10 @@ def install_mcp_server(uninstall: bool = False) -> bool:
 
     # 3. Add or update PortfolioPulse MCP server definition
     python_bin = sys.executable or "python3"
+    entrypoint = repo_dir / "mcp_server.py"
     server_entry = {
         "command": python_bin,
-        "args": ["-m", "src.connectors.mcp_client", "--stdio"],
+        "args": [str(entrypoint)],
         "cwd": str(repo_dir),
         "env": {
             "PYTHONPATH": str(repo_dir)
