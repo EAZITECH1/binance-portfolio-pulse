@@ -5,8 +5,9 @@
 [![Binance Agent OS](https://img.shields.io/badge/Binance-Agent%20OS-F0B90B?logo=binance&logoColor=black)](https://developers.binance.com)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Protocol%202024--11--05-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI Test Suite](https://github.com/EAZITECH1/binance-portfolio-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/EAZITECH1/binance-portfolio-pulse/actions/workflows/ci.yml)
 [![Tests: Passing](https://img.shields.io/badge/tests-15%2F15%20passing-success)](tests/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![X (Twitter) Video](https://img.shields.io/badge/X-Public%20Video%20Demo-black?logo=x&logoColor=white)](https://x.com/eazitechh/status/2097412347803435075)
 
 Binance PortfolioPulse AI is an agentic finance and social intelligence system built for the **Binance Agent OS Mini Hackathon (Track A – Agent Creation, Data Analysis theme)**.
