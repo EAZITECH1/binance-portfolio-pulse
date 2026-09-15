@@ -381,3 +381,130 @@ class MockDataProvider:
         for s in symbols:
             res[s.upper()] = self.get_klines_history(s, limit=limit)
         return res
+
+    def get_my_trades(self, symbol: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Simulate recent filled spot trades on any pair."""
+        sym = symbol.upper()
+        now_ms = int(time.time() * 1000)
+        day_ms = 86400 * 1000
+
+        # Deterministic synthetic trades based on symbol
+        trades = [
+            {
+                "symbol": sym,
+                "id": 10001,
+                "orderId": 5001,
+                "price": "64200.50" if "BTC" in sym else ("2650.20" if "ETH" in sym else "155.40"),
+                "qty": "0.15" if "BTC" in sym else ("1.50" if "ETH" in sym else "20.0"),
+                "quoteQty": "9630.07" if "BTC" in sym else ("3975.30" if "ETH" in sym else "3108.00"),
+                "commission": "0.0035",
+                "commissionAsset": "BNB",
+                "time": now_ms - (1 * day_ms),
+                "isBuyer": True,
+                "isMaker": False,
+                "isBestMatch": True,
+            },
+            {
+                "symbol": sym,
+                "id": 10002,
+                "orderId": 5002,
+                "price": "65100.00" if "BTC" in sym else ("2710.00" if "ETH" in sym else "162.00"),
+                "qty": "0.08" if "BTC" in sym else ("0.80" if "ETH" in sym else "10.0"),
+                "quoteQty": "5208.00" if "BTC" in sym else ("2168.00" if "ETH" in sym else "1620.00"),
+                "commission": "0.0018",
+                "commissionAsset": "BNB",
+                "time": now_ms - (3 * day_ms),
+                "isBuyer": False,
+                "isMaker": True,
+                "isBestMatch": True,
+            },
+            {
+                "symbol": sym,
+                "id": 10003,
+                "orderId": 5003,
+                "price": "63200.00" if "BTC" in sym else ("2580.00" if "ETH" in sym else "148.50"),
+                "qty": "0.20" if "BTC" in sym else ("2.00" if "ETH" in sym else "25.0"),
+                "quoteQty": "12640.00" if "BTC" in sym else ("5160.00" if "ETH" in sym else "3712.50"),
+                "commission": "0.0042",
+                "commissionAsset": "BNB",
+                "time": now_ms - (6 * day_ms),
+                "isBuyer": True,
+                "isMaker": False,
+                "isBestMatch": True,
+            },
+        ]
+        return trades[:limit]
+
+    def get_deposit_history(self, coin: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Simulate incoming crypto and fiat deposit transfers."""
+        now_ms = int(time.time() * 1000)
+        day_ms = 86400 * 1000
+        deposits = [
+            {
+                "id": "dep_001",
+                "amount": "5000.00",
+                "coin": "USDT",
+                "network": "TRX",
+                "status": 1,  # 1 = Success
+                "address": "TYD6nvh5KjU9...",
+                "txId": "0x789abcde1234567890abcdef1234567890abcdef1234567890abcdef12345678",
+                "insertTime": now_ms - (2 * day_ms),
+            },
+            {
+                "id": "dep_002",
+                "amount": "0.25",
+                "coin": "BTC",
+                "network": "BTC",
+                "status": 1,
+                "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+                "txId": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                "insertTime": now_ms - (10 * day_ms),
+            },
+            {
+                "id": "dep_003",
+                "amount": "3.50",
+                "coin": "ETH",
+                "network": "ETH",
+                "status": 1,
+                "address": "0x71C...829",
+                "txId": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                "insertTime": now_ms - (25 * day_ms),
+            },
+        ]
+        if coin:
+            deposits = [d for d in deposits if d["coin"].upper() == coin.upper()]
+        return deposits[:limit]
+
+    def get_withdraw_history(self, coin: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Simulate outgoing crypto and fiat withdrawal transfers."""
+        now_ms = int(time.time() * 1000)
+        day_ms = 86400 * 1000
+        withdrawals = [
+            {
+                "id": "with_001",
+                "amount": "1200.00",
+                "transactionFee": "1.00",
+                "coin": "USDT",
+                "network": "BSC",
+                "status": 6,  # 6 = Completed
+                "address": "0x34a...5b2",
+                "txId": "0xdeadbeef1234567890abcdef1234567890abcdef1234567890abcdef12345678",
+                "applyTime": "2026-09-12 14:20:00",
+                "completeTime": "2026-09-12 14:23:45",
+            },
+            {
+                "id": "with_002",
+                "amount": "0.05",
+                "transactionFee": "0.0002",
+                "coin": "BTC",
+                "network": "BTC",
+                "status": 6,
+                "address": "bc1qhar0...98x",
+                "txId": "0xfeedbeef1234567890abcdef1234567890abcdef1234567890abcdef12345678",
+                "applyTime": "2026-09-05 09:10:00",
+                "completeTime": "2026-09-05 09:35:10",
+            },
+        ]
+        if coin:
+            withdrawals = [w for w in withdrawals if w["coin"].upper() == coin.upper()]
+        return withdrawals[:limit]

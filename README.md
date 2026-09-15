@@ -254,19 +254,22 @@ Type any of these prompts directly into Claude:
 
 ## 🔌 Callable MCP Tools Exposed
 
-PortfolioPulse exposes 11 high-level and granular tools conforming to the Model Context Protocol standard:
+PortfolioPulse exposes 14 high-level and granular tools conforming to the Model Context Protocol standard:
 
-1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, market conditions, and order book depth.
+1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, market conditions, order book depth, transfers, and trade history.
 2. `get_top_by_market_cap(limit=10, include_stables=True)`: Live market capitalization rankings, circulating supply, and prices sourced directly and exclusively from Binance's composite market data endpoint, including major stablecoins (USDT, USDC).
 3. `get_order_book(symbol="BTCUSDT", limit=20)`: Real-time order book market depth, best bid/ask, spread in USD and basis points (bps), total liquidity, and order imbalance ratio for any Binance trading pair.
-4. `get_futures_account()`: USDT-M Futures derivatives margin balance, unrealized PnL, effective leverage, margin ratio, and positions.
-5. `get_predictive_balance()`: 30-day forward-looking portfolio projections, portfolio beta, and quantitative stress testing (Bull, Bear, Flash Crash, VaR) using historical klines.
-6. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens directly from Binance spot tickers.
-7. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points) from verified Binance exchange data.
-8. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
-9. `get_account_balances()`: Fetches spot balances and asset values.
-10. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
-11. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
+4. `get_my_trades(symbol="BTCUSDT", limit=50)`: Historical spot trade executions on any pair, fill prices, quantities, commissions, and buyer/seller sides.
+5. `get_deposit_history(coin=None, limit=50)`: Incoming crypto and fiat deposit transfer records, txIds, amounts, and networks.
+6. `get_withdraw_history(coin=None, limit=50)`: Outgoing withdrawal transfer records, destination addresses, fees, and status.
+7. `get_futures_account()`: USDT-M Futures derivatives margin balance, unrealized PnL, effective leverage, margin ratio, and positions.
+8. `get_predictive_balance()`: 30-day forward-looking portfolio projections, portfolio beta, and quantitative stress testing (Bull, Bear, Flash Crash, VaR) using historical klines.
+9. `get_market_overview(watchlist=[...])`: Ingests real-time prices, 24h change %, volume, and top movers across custom or default tokens directly from Binance spot tickers.
+10. `generate_market_brief(watchlist=[...])`: Generates a cohesive market update (executive summary + 5 structured analytical points) from verified Binance exchange data.
+11. `draft_tweet(topic="market"|"portfolio", style="single"|"thread")`: Drafts publication-ready crypto-journalism posts strictly under 280 characters.
+12. `get_account_balances()`: Fetches spot balances and asset values.
+13. `get_ticker_24hr(symbol)`: Rolling 24h price, high/low, and volume statistics for a given pair.
+14. `get_klines(symbol, interval, limit)`: Historical candlesticks for technical trend and moving average analysis.
 
 ---
 
@@ -277,11 +280,13 @@ When running outside Claude Desktop, PortfolioPulse operates as a powerful stand
 ```bash
 # 1. Ask natural language questions via CLI
 python3 run_agent.py --ask "What is my highest risk asset?"
-python3 run_agent.py --ask "Give me a quick market summary and draft a tweet"
-python3 run_agent.py --ask "Why is ETH moving today, and what should I watch?"
+python3 run_agent.py --ask "Show my recent deposit and withdrawal transfers"
+python3 run_agent.py --ask "What is the order book spread and depth for ETH?"
 
 # 2. Market Intelligence, Order Books & Social Content
 python3 run_agent.py --orderbook BTCUSDT                                     # Inspect live Binance order book & spread
+python3 run_agent.py --trades BTCUSDT                                        # Inspect trade execution fills on any pair
+python3 run_agent.py --transfers                                            # Inspect wallet deposits and withdrawals
 python3 run_agent.py --brief market                                         # Market brief
 python3 run_agent.py --brief market --draft-tweet --tweet-style single      # Single tweet (<=280 chars)
 python3 run_agent.py --brief market --draft-tweet --tweet-style thread      # 3-tweet thread

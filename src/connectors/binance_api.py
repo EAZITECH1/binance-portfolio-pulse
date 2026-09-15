@@ -505,3 +505,89 @@ class BinanceAPIClient:
             except Exception as e:
                 logger.debug(f"Could not fetch historical klines for {s_clean}: {e}")
         return results
+
+    def get_my_trades(
+        self,
+        symbol: str,
+        limit: int = 50,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        from_id: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch user's spot trade execution history on a specific trading pair (requires signed API key/secret).
+        Endpoint: GET /api/v3/myTrades
+        """
+        sym = symbol.upper()
+        params: Dict[str, Any] = {"symbol": sym, "limit": min(limit, 1000)}
+        if start_time:
+            params["startTime"] = start_time
+        if end_time:
+            params["endTime"] = end_time
+        if from_id is not None:
+            params["fromId"] = from_id
+
+        try:
+            res = self._request("GET", "/api/v3/myTrades", params=params, signed=True)
+            return res if isinstance(res, list) else []
+        except Exception as e:
+            logger.warning(f"Error fetching trade history for {sym}: {e}")
+            raise
+
+    def get_deposit_history(
+        self,
+        coin: Optional[str] = None,
+        status: Optional[int] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch user's deposit history (crypto & fiat) (requires signed API key/secret).
+        Endpoint: GET /sapi/v1/capital/deposit/hisrec
+        """
+        params: Dict[str, Any] = {"limit": min(limit, 1000)}
+        if coin:
+            params["coin"] = coin.upper()
+        if status is not None:
+            params["status"] = status
+        if start_time:
+            params["startTime"] = start_time
+        if end_time:
+            params["endTime"] = end_time
+
+        try:
+            res = self._request("GET", "/sapi/v1/capital/deposit/hisrec", params=params, signed=True)
+            return res if isinstance(res, list) else []
+        except Exception as e:
+            logger.warning(f"Error fetching deposit history: {e}")
+            raise
+
+    def get_withdraw_history(
+        self,
+        coin: Optional[str] = None,
+        status: Optional[int] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch user's withdrawal history (requires signed API key/secret).
+        Endpoint: GET /sapi/v1/capital/withdraw/history
+        """
+        params: Dict[str, Any] = {"limit": min(limit, 1000)}
+        if coin:
+            params["coin"] = coin.upper()
+        if status is not None:
+            params["status"] = status
+        if start_time:
+            params["startTime"] = start_time
+        if end_time:
+            params["endTime"] = end_time
+
+        try:
+            res = self._request("GET", "/sapi/v1/capital/withdraw/history", params=params, signed=True)
+            return res if isinstance(res, list) else []
+        except Exception as e:
+            logger.warning(f"Error fetching withdrawal history: {e}")
+            raise

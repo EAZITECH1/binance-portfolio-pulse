@@ -545,6 +545,18 @@ def main():
         help="Inspect real-time Binance order book depth, bids/asks, and spread (e.g. --orderbook BTCUSDT)",
     )
     parser.add_argument(
+        "--trades",
+        type=str,
+        default=None,
+        metavar="SYMBOL",
+        help="Inspect recent spot trade executions, prices, and fees on any pair (e.g. --trades BTCUSDT)",
+    )
+    parser.add_argument(
+        "--transfers",
+        action="store_true",
+        help="Inspect Binance wallet deposit and withdrawal history and net funding",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -586,6 +598,69 @@ def main():
         print(" Top 5 Bids (Buy Wall):")
         for b in raw_depth.get("bids_sample", []):
             print(f"   ${b['price']:,.4f} | Qty: {b['quantity']:>10.4f} | Value: ${b['total_usd']:>12,.2f}")
+        print("=" * 64 + "\n")
+        return
+
+    # If --trades is specified, inspect spot trade executions on that pair
+    if args.trades:
+        sym = args.trades.strip().upper()
+        if not (sym.endswith("USDT") or sym.endswith("BTC") or sym.endswith("FDUSD") or sym.endswith("USDC")):
+            sym = f"{sym}USDT"
+        mcp = BinanceMCPClient()
+        tr_data = mcp.call_tool("get_my_trades", {"symbol": sym, "limit": 50})
+        
+        print("\n" + "=" * 64)
+        print(f" 📋 BINANCE SPOT TRADE EXECUTION HISTORY ({sym})")
+        print("=" * 64)
+        print(f" • Total Executed Trades: {tr_data.get('total_trades', 0)}")
+        print(f" • Total Traded Volume:   ${tr_data.get('total_volume_usd', 0):,.2f}")
+        print(f"   ├─ Buy Volume:         ${tr_data.get('total_buy_volume_usd', 0):,.2f} ({tr_data.get('total_quantity_bought', 0)} {sym})")
+        print(f"   └─ Sell Volume:        ${tr_data.get('total_sell_volume_usd', 0):,.2f} ({tr_data.get('total_quantity_sold', 0)} {sym})")
+        print(f" • Average Fill Prices:   Buy: ${tr_data.get('avg_buy_price', 0):,.2f} | Sell: ${tr_data.get('avg_sell_price', 0):,.2f}")
+        fees = tr_data.get("total_fees_by_asset", {})
+        if fees:
+            print(" • Total Commissions:     " + ", ".join(f"{v:.4f} {k}" for k, v in fees.items()))
+        print("-" * 64)
+        trades_list = tr_data.get("trades", [])
+        if trades_list:
+            print(" Recent Executions:")
+            for t in trades_list[:10]:
+                side_color = "🟢 BUY " if t["side"] == "BUY" else "🔴 SELL"
+                maker_tag = "Maker" if t["is_maker"] else "Taker"
+                print(f"   [{t['datetime_utc']}] {side_color} {t['quantity']:>10.4f} @ ${t['price']:>10,.2f} (${t['quote_quantity']:>10,.2f}) | Fee: {t['commission']} {t['commission_asset']} ({maker_tag})")
+        else:
+            print(f" No trade executions recorded on Binance for {sym}.")
+        print("=" * 64 + "\n")
+        return
+
+    # If --transfers is specified, inspect deposits and withdrawals
+    if args.transfers:
+        mcp = BinanceMCPClient()
+        dep_data = mcp.call_tool("get_deposit_history", {"limit": 50})
+        wit_data = mcp.call_tool("get_withdraw_history", {"limit": 50})
+
+        print("\n" + "=" * 64)
+        print(" 💳 BINANCE WALLET TRANSFERS (DEPOSITS & WITHDRAWALS)")
+        print("=" * 64)
+        print(f" • Total Deposits:    {dep_data.get('total_deposits', 0)} transfers")
+        print(f" • Total Withdrawals: {wit_data.get('total_withdrawals', 0)} transfers")
+        print("-" * 64)
+        print(" 📥 Recent Deposits (Incoming Funding):")
+        deps = dep_data.get("deposits", [])
+        if deps:
+            for d in deps[:5]:
+                print(f"   • [{d['datetime_utc']}] +{d['amount']:>10.4f} {d['coin']:<6} via {d.get('network') or 'N/A'} [{d['status']}]")
+        else:
+            print("   (No deposits recorded)")
+        print("-" * 64)
+        print(" 📤 Recent Withdrawals (Outgoing Transfers):")
+        wits = wit_data.get("withdrawals", [])
+        if wits:
+            for w in wits[:5]:
+                fee_txt = f" | Fee: {w['fee']} {w['coin']}" if w.get("fee", 0) > 0 else ""
+                print(f"   • [{w['datetime_utc']}] -{w['amount']:>10.4f} {w['coin']:<6} via {w.get('network') or 'N/A'}{fee_txt} [{w['status']}]")
+        else:
+            print("   (No withdrawals recorded)")
         print("=" * 64 + "\n")
         return
 

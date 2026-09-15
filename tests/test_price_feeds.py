@@ -46,7 +46,10 @@ class TestMarketOverview(unittest.TestCase):
         self.assertIn("get_futures_account", tool_names)
         self.assertIn("get_predictive_balance", tool_names)
         self.assertIn("get_order_book", tool_names)
-        self.assertEqual(len(tools), 11)
+        self.assertIn("get_my_trades", tool_names)
+        self.assertIn("get_deposit_history", tool_names)
+        self.assertIn("get_withdraw_history", tool_names)
+        self.assertEqual(len(tools), 14)
 
     def test_market_overview_drops_unknown_symbols(self):
         """Verify unknown or unlisted tokens like FAKECOIN are dropped and not fabricated as top gainers."""

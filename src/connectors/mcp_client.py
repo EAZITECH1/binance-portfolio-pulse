@@ -235,6 +235,62 @@ class BinanceMCPClient:
                     "required": ["symbol"],
                 },
             },
+            {
+                "name": "get_my_trades",
+                "description": "Fetch historical spot trade executions, fill prices, quantities, commissions, and buy/sell sides for any Binance trading pair.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {
+                            "type": "string",
+                            "description": "Trading pair symbol (e.g. 'BTCUSDT', 'ETHUSDT', 'SOLUSDT')",
+                            "default": "BTCUSDT",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of recent trades to return (default: 50, max: 500)",
+                            "default": 50,
+                        },
+                    },
+                    "required": ["symbol"],
+                },
+            },
+            {
+                "name": "get_deposit_history",
+                "description": "Fetch user's crypto and fiat deposit transfer records, txIds, amounts, and networks on Binance.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "coin": {
+                            "type": "string",
+                            "description": "Optional asset filter (e.g. 'USDT', 'BTC', 'ETH')",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of deposit records (default: 50)",
+                            "default": 50,
+                        },
+                    },
+                },
+            },
+            {
+                "name": "get_withdraw_history",
+                "description": "Fetch user's crypto and fiat withdrawal transfer records, destination addresses, fees, and status on Binance.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "coin": {
+                            "type": "string",
+                            "description": "Optional asset filter (e.g. 'USDT', 'BTC', 'ETH')",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of withdrawal records (default: 50)",
+                            "default": 50,
+                        },
+                    },
+                },
+            },
         ]
 
     def ask_portfoliopulse(
@@ -310,6 +366,116 @@ class BinanceMCPClient:
                 "query": prompt,
                 "answer": ob_analysis.format_summary(),
                 "order_book": ob_analysis.to_dict(),
+                "requires_credentials": False,
+            }
+
+        # Priority 1.5: Deposits & Withdrawals / Transfer History Query
+        is_transfer_query = any(w in prompt.lower() for w in [
+            "deposit", "withdraw", "transfers", "cash flow", "funding history", "deposits and withdrawals", "funding"
+        ])
+        if is_transfer_query:
+            from ..analytics.transactions import TransactionHistoryAnalyzer
+            raw_deps = []
+            raw_wits = []
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_deps = self.api_client.get_deposit_history(limit=50)
+                except Exception as e:
+                    logger.warning(f"Live deposit query failed: {e}")
+                try:
+                    raw_wits = self.api_client.get_withdraw_history(limit=50)
+                except Exception as e:
+                    logger.warning(f"Live withdrawal query failed: {e}")
+            elif active_mode == "mock":
+                raw_deps = self.mock_provider.get_deposit_history(limit=50)
+                raw_wits = self.mock_provider.get_withdraw_history(limit=50)
+
+            if not raw_deps and not raw_wits and active_mode != "mock":
+                # Check if API keys exist
+                if not (self.api_client.api_key and self.api_client.api_secret):
+                    return {
+                        "query": prompt,
+                        "answer": (
+                            "🔐 **API Keys Required for Transfer History**\n"
+                            "To inspect your deposits and withdrawals, please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in `.env`."
+                        ),
+                        "requires_credentials": True,
+                    }
+
+            t_analysis = TransactionHistoryAnalyzer.parse_transfers(raw_deps, raw_wits)
+            summary_txt = t_analysis.format_summary()
+            
+            recent_lines = ["\nRecent Transfers:"]
+            for rec in t_analysis.transfers[:8]:
+                sign = "+" if rec.transfer_type == "DEPOSIT" else "-"
+                fee_txt = f" (Fee: {rec.fee} {rec.coin})" if rec.fee > 0 else ""
+                recent_lines.append(f"• [{rec.formatted_time}] {rec.transfer_type}: {sign}{rec.amount} {rec.coin}{fee_txt} [{rec.status}]")
+
+            return {
+                "query": prompt,
+                "answer": summary_txt + "\n" + "\n".join(recent_lines),
+                "transfers": t_analysis.to_dict(),
+                "requires_credentials": False,
+            }
+
+        # Priority 1.6: Spot Trade History Query on Any Pair
+        is_trade_query = any(w in prompt.lower() for w in [
+            "my trade", "trade history", "trades on", "executed trades", "past trades", "my orders", "fill history", "fills"
+        ])
+        if is_trade_query:
+            import re
+            from ..analytics.transactions import TransactionHistoryAnalyzer
+            match = re.search(r'\b([a-zA-Z0-9]{2,10}(?:usdt|btc|eth|bnb|fdusd)?)\b', prompt.lower())
+            asset_cand = "BTCUSDT"
+            if match:
+                cand = match.group(1).upper()
+                if cand in ("ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "SUI", "NEAR", "LINK", "BTC"):
+                    asset_cand = f"{cand}USDT"
+                elif cand.endswith("USDT") or cand.endswith("BTC") or cand.endswith("FDUSD"):
+                    asset_cand = cand
+                elif "eth" in prompt.lower():
+                    asset_cand = "ETHUSDT"
+                elif "sol" in prompt.lower():
+                    asset_cand = "SOLUSDT"
+                elif "bnb" in prompt.lower():
+                    asset_cand = "BNBUSDT"
+
+            raw_trades = []
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_trades = self.api_client.get_my_trades(asset_cand, limit=50)
+                except Exception as e:
+                    logger.warning(f"Live trade query failed for {asset_cand}: {e}")
+            elif active_mode == "mock":
+                raw_trades = self.mock_provider.get_my_trades(asset_cand, limit=50)
+
+            if not raw_trades and active_mode != "mock":
+                if not (self.api_client.api_key and self.api_client.api_secret):
+                    return {
+                        "query": prompt,
+                        "answer": (
+                            f"🔐 **API Keys Required for Trade History**\n"
+                            f"To inspect your spot trade executions on {asset_cand}, please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in `.env`."
+                        ),
+                        "requires_credentials": True,
+                    }
+
+            tr_analysis = TransactionHistoryAnalyzer.parse_trades(asset_cand, raw_trades)
+            summary_txt = tr_analysis.format_summary()
+
+            recent_trades_txt = ["\nRecent Executions:"]
+            if tr_analysis.trades:
+                for t in tr_analysis.trades[:8]:
+                    recent_trades_txt.append(
+                        f"• [{t.formatted_time}] {t.side} {t.quantity} {t.symbol} @ ${t.price:,.2f} (${t.quote_quantity:,.2f}) | Comm: {t.commission} {t.commission_asset}"
+                    )
+            else:
+                recent_trades_txt.append(f"• No trade executions found for {asset_cand}.")
+
+            return {
+                "query": prompt,
+                "answer": summary_txt + "\n" + "\n".join(recent_trades_txt),
+                "trades": tr_analysis.to_dict(),
                 "requires_credentials": False,
             }
 
@@ -806,6 +972,71 @@ class BinanceMCPClient:
                     raw_depth = self.mock_provider.get_order_book(sym, limit=limit)
             analysis = OrderBookAnalyzer.analyze(sym, raw_depth)
             return analysis.to_dict()
+
+        elif name == "get_my_trades":
+            from ..config import config
+            from ..analytics.transactions import TransactionHistoryAnalyzer
+            sym = (arguments.get("symbol") or "BTCUSDT").upper()
+            limit = int(arguments.get("limit", 50))
+            raw_trades = []
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_trades = self.api_client.get_my_trades(sym, limit=limit)
+                except Exception as e:
+                    logger.warning(f"Live trade history fetch failed for {sym}: {e}")
+                    if config.mode == "mock":
+                        raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
+            elif config.mode == "mock":
+                raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
+            
+            analysis = TransactionHistoryAnalyzer.parse_trades(sym, raw_trades)
+            return analysis.to_dict()
+
+        elif name == "get_deposit_history":
+            from ..config import config
+            from ..analytics.transactions import TransactionHistoryAnalyzer
+            coin = arguments.get("coin")
+            limit = int(arguments.get("limit", 50))
+            raw_deposits = []
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_deposits = self.api_client.get_deposit_history(coin=coin, limit=limit)
+                except Exception as e:
+                    logger.warning(f"Live deposit history fetch failed: {e}")
+                    if config.mode == "mock":
+                        raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
+            elif config.mode == "mock":
+                raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
+
+            analysis = TransactionHistoryAnalyzer.parse_transfers(raw_deposits, [])
+            return {
+                "total_deposits": len(raw_deposits),
+                "deposits_by_coin": analysis.deposits_by_coin,
+                "deposits": [t.to_dict() for t in analysis.transfers if t.transfer_type == "DEPOSIT"],
+            }
+
+        elif name == "get_withdraw_history":
+            from ..config import config
+            from ..analytics.transactions import TransactionHistoryAnalyzer
+            coin = arguments.get("coin")
+            limit = int(arguments.get("limit", 50))
+            raw_withdrawals = []
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_withdrawals = self.api_client.get_withdraw_history(coin=coin, limit=limit)
+                except Exception as e:
+                    logger.warning(f"Live withdrawal history fetch failed: {e}")
+                    if config.mode == "mock":
+                        raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
+            elif config.mode == "mock":
+                raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
+
+            analysis = TransactionHistoryAnalyzer.parse_transfers([], raw_withdrawals)
+            return {
+                "total_withdrawals": len(raw_withdrawals),
+                "withdrawals_by_coin": analysis.withdrawals_by_coin,
+                "withdrawals": [t.to_dict() for t in analysis.transfers if t.transfer_type == "WITHDRAWAL"],
+            }
 
         raise NotImplementedError(f"Tool {name} is not implemented.")
 
