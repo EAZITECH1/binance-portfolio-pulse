@@ -112,10 +112,10 @@ class TradeHistoryAnalysis:
 
     def format_summary(self) -> str:
         lines = [
-            f"📋 **Binance Trade History: {self.symbol}**",
-            f"• **Executed Trades:** {self.total_trades}",
+            f"📋 **Binance Trade History: {self.symbol} (Read-Only)**",
+            f"• **Past Filled Orders:** {self.total_trades}",
             f"• **Total Volume:** ${self.total_volume_usd:,.2f} (Buys: ${self.total_buy_volume_usd:,.2f} | Sells: ${self.total_sell_volume_usd:,.2f})",
-            f"• **Avg Execution:** Buy Price: ${self.avg_buy_price:,.2f} | Sell Price: ${self.avg_sell_price:,.2f}",
+            f"• **Avg Fill Price:** Buy: ${self.avg_buy_price:,.2f} | Sell: ${self.avg_sell_price:,.2f}",
         ]
         if self.total_fees_by_asset:
             fees_str = ", ".join(f"{v:.4f} {k}" for k, v in self.total_fees_by_asset.items())

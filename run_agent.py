@@ -549,7 +549,7 @@ def main():
         type=str,
         default=None,
         metavar="SYMBOL",
-        help="Inspect recent spot trade executions, prices, and fees on any pair (e.g. --trades BTCUSDT)",
+        help="Inspect past spot trade fill history, prices, and commissions on any pair (Read-Only) (e.g. --trades BTCUSDT)",
     )
     parser.add_argument(
         "--transfers",
@@ -601,7 +601,7 @@ def main():
         print("=" * 64 + "\n")
         return
 
-    # If --trades is specified, inspect spot trade executions on that pair
+    # If --trades is specified, inspect past spot trade fills on that pair (read-only)
     if args.trades:
         sym = args.trades.strip().upper()
         if not (sym.endswith("USDT") or sym.endswith("BTC") or sym.endswith("FDUSD") or sym.endswith("USDC")):
@@ -610,9 +610,9 @@ def main():
         tr_data = mcp.call_tool("get_my_trades", {"symbol": sym, "limit": 50})
         
         print("\n" + "=" * 64)
-        print(f" 📋 BINANCE SPOT TRADE EXECUTION HISTORY ({sym})")
+        print(f" 📋 BINANCE PAST SPOT TRADE FILL HISTORY (READ-ONLY) ({sym})")
         print("=" * 64)
-        print(f" • Total Executed Trades: {tr_data.get('total_trades', 0)}")
+        print(f" • Total Filled Orders:   {tr_data.get('total_trades', 0)}")
         print(f" • Total Traded Volume:   ${tr_data.get('total_volume_usd', 0):,.2f}")
         print(f"   ├─ Buy Volume:         ${tr_data.get('total_buy_volume_usd', 0):,.2f} ({tr_data.get('total_quantity_bought', 0)} {sym})")
         print(f"   └─ Sell Volume:        ${tr_data.get('total_sell_volume_usd', 0):,.2f} ({tr_data.get('total_quantity_sold', 0)} {sym})")

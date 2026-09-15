@@ -237,7 +237,7 @@ class BinanceMCPClient:
             },
             {
                 "name": "get_my_trades",
-                "description": "Fetch historical spot trade executions, fill prices, quantities, commissions, and buy/sell sides for any Binance trading pair.",
+                "description": "Read-only: Fetch past filled spot orders, historical fill prices, quantities, and commissions on any Binance trading pair (does not place or execute orders).",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -455,7 +455,7 @@ class BinanceMCPClient:
                         "query": prompt,
                         "answer": (
                             f"🔐 **API Keys Required for Trade History**\n"
-                            f"To inspect your spot trade executions on {asset_cand}, please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in `.env`."
+                            f"To inspect your past filled spot orders on {asset_cand}, please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in `.env`."
                         ),
                         "requires_credentials": True,
                     }
@@ -463,7 +463,7 @@ class BinanceMCPClient:
             tr_analysis = TransactionHistoryAnalyzer.parse_trades(asset_cand, raw_trades)
             summary_txt = tr_analysis.format_summary()
 
-            recent_trades_txt = ["\nRecent Executions:"]
+            recent_trades_txt = ["\nRecent Filled Orders:"]
             if tr_analysis.trades:
                 for t in tr_analysis.trades[:8]:
                     recent_trades_txt.append(

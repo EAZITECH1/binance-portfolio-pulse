@@ -55,10 +55,9 @@ In fast-paced Web3 media, timing and factual accuracy are everything. PortfolioP
 ## 🌟 Key Features
 
 - 🌐 **Real-Time Market-Wide Intelligence:** Tracks top movers, volume leaders, and macro sentiment across a customizable watchlist (BTC, ETH, SOL, BNB, SUI, NEAR, AVAX, DOGE, PEPE), using 100% genuine live Binance spot exchange data.
-- 📊 **Verified Binance Market Indicators & Volume Tracking:** Ingests live 24h ticker metrics, tracked exchange volumes, top gainers, and market sentiment directly from Binance spot markets. Zero deceptive mock data.
 - 📈 **Real-Time Order Book & Liquidity Depth:** Live bid/ask spreads (USD and basis points), total liquidity, and order book imbalance ratios (buy wall vs. sell wall) for any Binance spot trading pair.
 - 💳 **Deposit & Withdrawal Transfer Tracking:** Real-time visibility into historical incoming deposits and outgoing withdrawals, transfer fees, network confirmations, and net wallet cash flows.
-- 📋 **Spot Trade Execution History on Any Pair:** Full fill history on any trading pair (price, quantity, USD value, commission fees paid in BNB/USDT, and buyer/seller side).
+- 📋 **Past Spot Trade Fill & Order History (Read-Only):** Ingests historical filled buy and sell orders on any trading pair (fill price, quantity, USD value, commission fees paid in BNB/USDT, and buyer/seller side) for portfolio analytics. Strictly read-only; zero trading capabilities.
 - ⚡ **USDT-M Futures Derivatives Analysis:** Dedicated margin balance, unrealized PnL, effective leverage, and margin ratio analytics. Transparently reports spot-only mode when futures are not active.
 - 🔮 **Predictive Balance & Quantitative Stress Engine:** Empirical beta calculations and 30-day forward-looking stress simulations (Bull Market, Bear Market, Flash Crash, and Parametric VaR) powered by real historical klines.
 - 🐦 **Crypto-Media Tweet & Thread Drafter:** Generates publication-ready social posts in crisp crypto-journalism style. Supports single tweets and 3-part threads, strictly adhering to Twitter/X's 280-character ceiling.
@@ -79,7 +78,7 @@ When PortfolioPulse is registered as an MCP server in **Claude Code**, **Claude 
 | *"Give me a quick market update on what's moving today"* | `generate_market_brief()` | Standalone brief with macro trends, top gainers/losers, and market indicators. |
 | *"What is the order book spread and bid/ask depth for BTC?"* | `get_order_book(symbol="BTCUSDT")` | Top bids/asks, spread in USD and basis points (bps), total liquidity, and imbalance ratio. |
 | *"Show my recent deposit and withdrawal transfers"* | `get_deposit_history()` + `get_withdraw_history()` | Historical wallet transfers, deposit/withdrawal records, networks, fees, and net funding. |
-| *"What are my recent trades on SOLUSDT?"* | `get_my_trades(symbol="SOLUSDT")` | Trade executions, fill prices, quantities, commissions paid, and buy/sell volumes. |
+| *"What are my past trade fills on SOLUSDT?"* | `get_my_trades(symbol="SOLUSDT")` | Read-only historical filled orders, average fill prices, quantities, and commissions paid. |
 | *"Run a predictive balance projection and stress test on my portfolio"* | `get_predictive_balance()` | Portfolio beta, 30-day Monte Carlo projections, and Bull/Bear/Flash Crash stress scenarios. |
 | *"What is my futures margin balance and leverage?"* | `get_futures_account()` | Futures account margin, unrealized PnL, leverage, or guidance if spot-only mode. |
 | *"Draft a tweet about today's crypto market"* | `draft_tweet(topic="market", style="single")` | Ready-to-post Cointelegraph-style tweet under 280 characters with stats and hashtags. |
@@ -257,7 +256,7 @@ Type any of these prompts directly into Claude:
 1. 💬 *"Use PortfolioPulse to give me a market update and draft a tweet about it."*
 2. 💬 *"What is the order book spread and bid/ask depth for BTC?"*
 3. 💬 *"Show my recent deposit and withdrawal transfers on Binance."*
-4. 💬 *"What are my recent spot trade executions on SOLUSDT?"*
+4. 💬 *"What are my past trade fills on SOLUSDT?"*
 5. 💬 *"Run a predictive stress test and beta calculation on my portfolio."*
 6. 💬 *"What is my highest risk asset in PortfolioPulse?"*
 7. 💬 *"Analyze today's top gainers and market overview on Binance."*
@@ -272,7 +271,7 @@ PortfolioPulse exposes 14 high-level and granular tools conforming to the Model 
 1. `ask_portfoliopulse(prompt)`: Central natural language orchestrator that answers free-form questions about portfolio health, risk exposures, market conditions, order book depth, transfers, and trade history.
 2. `get_top_by_market_cap(limit=10, include_stables=True)`: Live market capitalization rankings, circulating supply, and prices sourced directly and exclusively from Binance's composite market data endpoint, including major stablecoins (USDT, USDC).
 3. `get_order_book(symbol="BTCUSDT", limit=20)`: Real-time order book market depth, best bid/ask, spread in USD and basis points (bps), total liquidity, and order imbalance ratio for any Binance trading pair.
-4. `get_my_trades(symbol="BTCUSDT", limit=50)`: Historical spot trade executions on any pair, fill prices, quantities, commissions, and buyer/seller sides.
+4. `get_my_trades(symbol="BTCUSDT", limit=50)`: Read-only query of past filled spot orders on any pair (historical fill prices, quantities, commissions, and buyer/seller sides). Does not place or execute trades.
 5. `get_deposit_history(coin=None, limit=50)`: Incoming crypto and fiat deposit transfer records, txIds, amounts, and networks.
 6. `get_withdraw_history(coin=None, limit=50)`: Outgoing withdrawal transfer records, destination addresses, fees, and status.
 7. `get_futures_account()`: USDT-M Futures derivatives margin balance, unrealized PnL, effective leverage, margin ratio, and positions.
@@ -356,7 +355,7 @@ python3 -m unittest discover -s tests -v
 ```
 
 **33 automated unit tests covering:**
-- Spot trade execution parsing, commissions, and buy/sell metrics (`test_transactions.py`)
+- Past spot trade fill parsing, commissions, and buy/sell metrics (`test_transactions.py`)
 - Crypto & fiat deposit/withdrawal history and net funding (`test_transactions.py`)
 - Order book market depth, best bid/ask, spread in USD/bps, and imbalance ratios (`test_order_book.py`)
 - USDT-M Futures derivatives balances, margin ratios, and leverage (`test_futures.py`)
