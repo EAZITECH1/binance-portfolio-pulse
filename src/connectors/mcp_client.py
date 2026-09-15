@@ -215,6 +215,26 @@ class BinanceMCPClient:
                 "description": "Run forward-looking portfolio balance projections, empirical beta calculations, and quantitative stress-test scenarios (Bull, Bear, Flash Crash, VaR) using real 30-day historical klines from Binance.",
                 "inputSchema": {"type": "object", "properties": {}},
             },
+            {
+                "name": "get_order_book",
+                "description": "Fetch real-time order book market depth, best bid/ask, spread in USD and basis points (bps), total liquidity, and order book imbalance ratio for any Binance trading pair.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {
+                            "type": "string",
+                            "description": "Trading pair symbol (e.g. 'BTCUSDT', 'ETHUSDT', 'SOLUSDT')",
+                            "default": "BTCUSDT",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Depth limit (e.g. 5, 10, 20, 50, 100). Default: 20",
+                            "default": 20,
+                        },
+                    },
+                    "required": ["symbol"],
+                },
+            },
         ]
 
     def ask_portfoliopulse(
@@ -240,6 +260,9 @@ class BinanceMCPClient:
             "my portfolio", "my balance", "my holding", "my wallet", "my pnl",
             "my account", "my risk", "my token", "my asset"
         ])
+        is_order_book_query = any(w in prompt.lower() for w in [
+            "order book", "orderbook", "spread", "bid", "ask", "depth", "liquidity depth", "order-book", "bids/asks"
+        ])
         is_mcap_query = any(w in prompt.lower() for w in [
             "market cap", "marketcap", "top 10", "top coins", "biggest coin", "rank by cap",
             "largest coin", "ranked by market"
@@ -250,7 +273,47 @@ class BinanceMCPClient:
             "crypto", "trend", "altcoin", "mover", "gainer", "loser", "action"
         ])
 
-        # Priority 1: Market Cap Rankings Query
+        # Priority 1: Order Book & Liquidity Depth Query
+        if is_order_book_query and not is_explicit_portfolio:
+            import re
+            from ..analytics.order_book import OrderBookAnalyzer
+            match = re.search(r'\b([a-zA-Z0-9]{2,10}(?:usdt|btc|eth|bnb|fdusd)?)\b', prompt.lower())
+            asset_cand = "BTCUSDT"
+            if match:
+                cand = match.group(1).upper()
+                if cand in ("ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "SUI", "NEAR", "LINK", "BTC"):
+                    asset_cand = f"{cand}USDT"
+                elif cand.endswith("USDT") or cand.endswith("BTC") or cand.endswith("FDUSD"):
+                    asset_cand = cand
+                elif "eth" in prompt.lower():
+                    asset_cand = "ETHUSDT"
+                elif "sol" in prompt.lower():
+                    asset_cand = "SOLUSDT"
+                elif "bnb" in prompt.lower():
+                    asset_cand = "BNBUSDT"
+                elif "btc" in prompt.lower() or "bitcoin" in prompt.lower():
+                    asset_cand = "BTCUSDT"
+            
+            raw_depth = None
+            if active_mode == "mock":
+                raw_depth = self.mock_provider.get_order_book(asset_cand, limit=20)
+            else:
+                try:
+                    raw_depth = self.api_client.get_order_book(asset_cand, limit=20)
+                except Exception as e:
+                    logger.warning(f"Order book query error: {e}")
+                    raw_depth = self.mock_provider.get_order_book(asset_cand, limit=20)
+            
+            ob_analysis = OrderBookAnalyzer.analyze(asset_cand, raw_depth)
+            
+            return {
+                "query": prompt,
+                "answer": ob_analysis.format_summary(),
+                "order_book": ob_analysis.to_dict(),
+                "requires_credentials": False,
+            }
+
+        # Priority 2: Market Cap Rankings Query
         if is_mcap_query:
             include_stables = "exclude stable" not in prompt.lower() and "no stable" not in prompt.lower()
             if active_mode == "mock":
@@ -726,6 +789,23 @@ class BinanceMCPClient:
 
             report = PredictiveBalanceEngine.forecast(spot_summary, f_summary, klines_batch)
             return report.to_dict()
+
+        elif name == "get_order_book":
+            from ..config import config
+            from ..analytics.order_book import OrderBookAnalyzer
+            sym = (arguments.get("symbol") or "BTCUSDT").upper()
+            limit = int(arguments.get("limit", 20))
+            raw_depth = None
+            if config.mode == "mock":
+                raw_depth = self.mock_provider.get_order_book(sym, limit=limit)
+            else:
+                try:
+                    raw_depth = self.api_client.get_order_book(sym, limit=limit)
+                except Exception as e:
+                    logger.warning(f"Live order book fetch failed for {sym}: {e}")
+                    raw_depth = self.mock_provider.get_order_book(sym, limit=limit)
+            analysis = OrderBookAnalyzer.analyze(sym, raw_depth)
+            return analysis.to_dict()
 
         raise NotImplementedError(f"Tool {name} is not implemented.")
 

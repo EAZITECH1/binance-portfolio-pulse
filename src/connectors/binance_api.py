@@ -185,6 +185,25 @@ class BinanceAPIClient:
             {"symbol": symbol.upper(), "interval": interval, "limit": limit},
         )
 
+    def get_order_book(self, symbol: str, limit: int = 20) -> Dict[str, Any]:
+        """
+        Fetch order book depth (bids, asks) for a symbol from Binance spot market.
+        Valid limits: 5, 10, 20, 50, 100, 500, 1000.
+        """
+        symbol = symbol.upper()
+        if not symbol.endswith("USDT") and not symbol.endswith("USDC") and not symbol.endswith("FDUSD"):
+            symbol = f"{symbol}USDT"
+        return self._request("GET", "/api/v3/depth", {"symbol": symbol, "limit": limit})
+
+    def get_book_ticker(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch best bid/ask price and quantity for a symbol in real-time.
+        """
+        symbol = symbol.upper()
+        if not symbol.endswith("USDT") and not symbol.endswith("USDC") and not symbol.endswith("FDUSD"):
+            symbol = f"{symbol}USDT"
+        return self._request("GET", "/api/v3/ticker/bookTicker", {"symbol": symbol})
+
     def get_account_balances(self) -> List[Dict[str, Any]]:
         """
         Fetch user spot account balances (requires signed API key/secret).

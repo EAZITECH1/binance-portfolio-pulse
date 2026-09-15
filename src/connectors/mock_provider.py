@@ -178,6 +178,50 @@ class MockDataProvider:
             
         return klines
 
+    def get_order_book(self, symbol: str, limit: int = 20) -> Dict[str, Any]:
+        """Generate realistic mock order book depth for a symbol."""
+        sym = symbol.upper()
+        if not sym.endswith("USDT") and not sym.endswith("USDC") and not sym.endswith("FDUSD"):
+            sym = f"{sym}USDT"
+
+        t = self.get_ticker_24hr(sym) or {}
+        last_price = float(t.get("lastPrice") or 63450.0)
+        
+        # Build bids descending and asks ascending with tight realistic spread
+        spread = max(0.01, round(last_price * 0.0001, 4))
+        best_bid = last_price - (spread / 2.0)
+        best_ask = last_price + (spread / 2.0)
+
+        bids = []
+        asks = []
+        for i in range(limit):
+            b_price = round(best_bid * (1.0 - (i * 0.0002)), 4)
+            b_qty = round(0.5 + (i * 0.35), 4)
+            bids.append([str(b_price), str(b_qty)])
+
+            a_price = round(best_ask * (1.0 + (i * 0.0002)), 4)
+            a_qty = round(0.4 + (i * 0.30), 4)
+            asks.append([str(a_price), str(a_qty)])
+
+        return {
+            "lastUpdateId": int(time.time() * 1000),
+            "bids": bids,
+            "asks": asks,
+        }
+
+    def get_book_ticker(self, symbol: str) -> Dict[str, Any]:
+        """Generate mock book ticker with best bid and best ask."""
+        depth = self.get_order_book(symbol, limit=1)
+        bids = depth.get("bids", [["100.0", "1.0"]])
+        asks = depth.get("asks", [["100.01", "1.0"]])
+        return {
+            "symbol": symbol.upper(),
+            "bidPrice": bids[0][0],
+            "bidQty": bids[0][1],
+            "askPrice": asks[0][0],
+            "askQty": asks[0][1],
+        }
+
     def get_market_overview(self, watchlist: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Return comprehensive market overview across a watchlist of assets.

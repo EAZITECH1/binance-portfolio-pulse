@@ -538,6 +538,13 @@ def main():
         help="Ask PortfolioPulse a natural language question (e.g. 'What is my highest risk asset?')",
     )
     parser.add_argument(
+        "--orderbook",
+        type=str,
+        default=None,
+        metavar="SYMBOL",
+        help="Inspect real-time Binance order book depth, bids/asks, and spread (e.g. --orderbook BTCUSDT)",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -548,6 +555,39 @@ def main():
 
     if args.verbose:
         logger.setLevel(10)
+
+    # If --orderbook is specified, inspect order book and exit
+    if args.orderbook:
+        from src.analytics.order_book import OrderBookAnalyzer
+        sym = args.orderbook.strip().upper()
+        if not (sym.endswith("USDT") or sym.endswith("BTC") or sym.endswith("FDUSD") or sym.endswith("USDC")):
+            sym = f"{sym}USDT"
+        
+        mcp = BinanceMCPClient()
+        raw_depth = mcp.call_tool("get_order_book", {"symbol": sym, "limit": 20})
+        
+        print("\n" + "=" * 64)
+        print(f" 📊 BINANCE ORDER BOOK DEPTH & SPREAD ANALYTICS ({sym})")
+        print("=" * 64)
+        print(f" • Best Bid:          ${raw_depth.get('best_bid', 0):,.4f}")
+        print(f" • Best Ask:          ${raw_depth.get('best_ask', 0):,.4f}")
+        print(f" • Mid Price:         ${raw_depth.get('mid_price', 0):,.4f}")
+        print(f" • Bid/Ask Spread:    ${raw_depth.get('spread_usd', 0):.6f} ({raw_depth.get('spread_bps', 0):.2f} bps)")
+        print(f" • Total Depth (USD): ${raw_depth.get('total_liquidity_usd', 0):,.2f}")
+        print(f"   ├─ Bid Depth:      ${raw_depth.get('bid_depth_usd', 0):,.2f}")
+        print(f"   └─ Ask Depth:      ${raw_depth.get('ask_depth_usd', 0):,.2f}")
+        print(f" • Imbalance Ratio:   {raw_depth.get('order_imbalance_ratio', 1.0):.3f}")
+        print(f" • Market Quality:    {raw_depth.get('market_regime', 'NORMAL')}")
+        print("-" * 64)
+        print(" Top 5 Asks (Sell Wall):")
+        for a in reversed(raw_depth.get("asks_sample", [])):
+            print(f"   ${a['price']:,.4f} | Qty: {a['quantity']:>10.4f} | Value: ${a['total_usd']:>12,.2f}")
+        print(f"   ─── SPREAD: ${raw_depth.get('spread_usd', 0):.6f} ({raw_depth.get('spread_bps', 0):.2f} bps) ───")
+        print(" Top 5 Bids (Buy Wall):")
+        for b in raw_depth.get("bids_sample", []):
+            print(f"   ${b['price']:,.4f} | Qty: {b['quantity']:>10.4f} | Value: ${b['total_usd']:>12,.2f}")
+        print("=" * 64 + "\n")
+        return
 
     # If --ask is specified, run the orchestrator and exit
     if args.ask:
