@@ -53,18 +53,22 @@ class FuturesAccountSummary:
     positions: List[FuturesPosition] = field(default_factory=list)
     net_delta_usd: float = 0.0
     risk_status: str = "SAFE"
+    is_active: bool = True
+    status_message: str = "Futures trading active"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "total_margin_balance_usd": round(self.total_margin_balance_usd, 2),
-            "total_wallet_balance_usd": round(self.total_wallet_balance_usd, 2),
-            "total_unrealized_pnl_usd": round(self.total_unrealized_pnl_usd, 2),
-            "total_maint_margin_usd": round(self.total_maint_margin_usd, 2),
-            "total_initial_margin_usd": round(self.total_initial_margin_usd, 2),
-            "available_balance_usd": round(self.available_balance_usd, 2),
-            "margin_ratio_pct": round(self.margin_ratio_pct, 2),
-            "effective_leverage": round(self.effective_leverage, 2),
-            "net_delta_usd": round(self.net_delta_usd, 2),
+            "is_active": self.is_active,
+            "status_message": self.status_message,
+            "total_margin_balance_usd": round(self.total_margin_balance_usd, 2) if self.is_active else None,
+            "total_wallet_balance_usd": round(self.total_wallet_balance_usd, 2) if self.is_active else None,
+            "total_unrealized_pnl_usd": round(self.total_unrealized_pnl_usd, 2) if self.is_active else None,
+            "total_maint_margin_usd": round(self.total_maint_margin_usd, 2) if self.is_active else None,
+            "total_initial_margin_usd": round(self.total_initial_margin_usd, 2) if self.is_active else None,
+            "available_balance_usd": round(self.available_balance_usd, 2) if self.is_active else None,
+            "margin_ratio_pct": round(self.margin_ratio_pct, 2) if self.is_active else None,
+            "effective_leverage": round(self.effective_leverage, 2) if self.is_active else None,
+            "net_delta_usd": round(self.net_delta_usd, 2) if self.is_active else None,
             "risk_status": self.risk_status,
             "position_count": len(self.positions),
             "positions": [p.to_dict() for p in self.positions],
@@ -80,7 +84,10 @@ class FuturesAnalyzer:
         raw_futures_data: Dict[str, Any],
         mark_prices: Optional[List[Dict[str, Any]]] = None,
     ) -> FuturesAccountSummary:
-        if not raw_futures_data:
+        is_active = raw_futures_data.get("is_active", True) if raw_futures_data else False
+        status_message = raw_futures_data.get("status_message", "Futures trading active") if raw_futures_data else "Futures trading not enabled or no active account"
+
+        if not raw_futures_data or not is_active:
             return FuturesAccountSummary(
                 total_margin_balance_usd=0.0,
                 total_wallet_balance_usd=0.0,
@@ -93,6 +100,8 @@ class FuturesAnalyzer:
                 positions=[],
                 net_delta_usd=0.0,
                 risk_status="SAFE",
+                is_active=is_active,
+                status_message=status_message,
             )
 
         margin_balance = float(raw_futures_data.get("totalMarginBalance", 0.0))

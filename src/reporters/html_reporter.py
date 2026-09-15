@@ -159,7 +159,7 @@ class HTMLReporter:
 
         # Futures Derivatives Section HTML
         futures_html = ""
-        if futures_summary and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
+        if futures_summary and futures_summary.is_active and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
             f_badge_class = "green" if futures_summary.risk_status == "SAFE" else ("amber" if futures_summary.risk_status == "MODERATE" else "red")
             f_rows = []
             for fp in futures_summary.positions:
@@ -182,7 +182,6 @@ class HTMLReporter:
                 + "".join(f_rows)
                 + "</tbody></table></div>"
             ) if f_rows else '<p class="muted">No active derivatives positions open.</p>'
-
             futures_html = f'''
         <div class="section-box" style="border-left: 4px solid var(--gold);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
@@ -216,6 +215,20 @@ class HTMLReporter:
                 </div>
             </div>
             {pos_table}
+        </div>'''
+        else:
+            futures_html = f'''
+        <div class="section-box" style="border-left: 4px solid var(--text-muted);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+                <h3 style="margin-bottom:0;">⚡ Binance Futures & Derivatives Intelligence</h3>
+                <span class="badge" style="background:#2b313a; color:var(--text-secondary);">Spot-Only Mode</span>
+            </div>
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:6px;">
+                Futures trading is not currently active on this account.
+            </p>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:0;">
+                💡 <em>To track live derivatives, margin ratio, and liquidation cushions, enable <strong>"Enable Futures"</strong> permissions on your API key in Binance API Management.</em>
+            </p>
         </div>'''
 
         # Predictive Scenario Section HTML

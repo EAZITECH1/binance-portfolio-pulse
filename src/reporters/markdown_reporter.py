@@ -108,7 +108,7 @@ class MarkdownReporter:
                 f"| **{p.asset}** | {amt_str} | {price_str} | {val_str} | {p.allocation_pct:.1f}% | {chg_str} | {pnl_str} |"
             )
 
-        if futures_summary and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
+        if futures_summary and futures_summary.is_active and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
             f_status_map = {
                 "SAFE": "🟢 SAFE",
                 "MODERATE": "🟡 MODERATE",
@@ -148,6 +148,17 @@ class MarkdownReporter:
                         f"| **{fp.symbol}** | `{fp.side} {fp.leverage}x` | {abs(fp.amount):.4f} (${fp.notional_usd:,.2f}) | ${fp.mark_price:,.2f} | ${fp.liquidation_price:,.2f} | {cushion_icon} {fp.liquidation_distance_pct:.1f}% | {pnl_icon} {pnl_sign}${fp.unrealized_pnl_usd:,.2f} ({pnl_sign}{fp.unrealized_pnl_pct:.1f}%) |"
                     )
                 lines.append("")
+        else:
+            lines.extend([
+                "",
+                "---",
+                "",
+                "## ⚡ Binance Futures Derivatives & Margin Intelligence",
+                "",
+                "ℹ️ **Status:** *Futures trading is not currently active on this account (operating in spot-only mode).*  ",
+                "💡 *To track live derivatives, margin ratio, and liquidation cushions, enable **'Enable Futures'** permissions on your API key in Binance API Management.*",
+                "",
+            ])
 
         if predictive_report and predictive_report.scenarios:
             lines.extend([

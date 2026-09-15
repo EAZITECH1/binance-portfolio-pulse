@@ -323,8 +323,12 @@ class PredictiveBalanceEngine:
             net_pnl = projected_total - current_total
             net_pnl_pct = (net_pnl / current_total * 100.0) if current_total > 0 else 0.0
 
+            has_active_futures = bool(futures_summary and futures_summary.is_active and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions))
             if not notes and btc_move < 0:
-                notes.append("Spot holdings buffer the downturn; no derivatives margin calls triggered.")
+                if has_active_futures:
+                    notes.append("Derivatives margin buffer holds; no liquidation triggered.")
+                else:
+                    notes.append("Spot-only holdings absorb market pullback without liquidation risk.")
             elif not notes and btc_move > 0:
                 notes.append("High-beta holdings provide leveraged upside capture.")
 

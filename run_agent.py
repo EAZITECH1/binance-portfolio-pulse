@@ -214,10 +214,14 @@ def generate_portfolio_report(
     if api_client_for_futures and config.api_key and config.api_secret:
         try:
             raw_futures = api_client_for_futures.get_futures_account()
+            if raw_futures and isinstance(raw_futures, dict):
+                raw_futures["is_active"] = True
+                raw_futures["status_message"] = "Futures trading active"
         except Exception as e:
-            logger.info(f"Live futures account query: {e}. (Enable Futures on your Binance API key to view active margin).")
-            # In live API mode, zero out futures rather than injecting fake mock balances
+            logger.info(f"Live futures account query: {e}. (User does not use Futures / permissions not enabled).")
             raw_futures = {
+                "is_active": False,
+                "status_message": "Futures not in use / not enabled on this API key",
                 "totalMarginBalance": "0.00",
                 "totalWalletBalance": "0.00",
                 "totalUnrealizedProfit": "0.00",
@@ -228,8 +232,13 @@ def generate_portfolio_report(
             }
     elif mode == "mock":
         raw_futures = MockDataProvider().get_futures_account()
+        if raw_futures and isinstance(raw_futures, dict):
+            raw_futures["is_active"] = True
+            raw_futures["status_message"] = "Futures sandbox simulation active"
     else:
         raw_futures = {
+            "is_active": False,
+            "status_message": "Futures not in use",
             "totalMarginBalance": "0.00",
             "totalWalletBalance": "0.00",
             "totalUnrealizedProfit": "0.00",
@@ -250,9 +259,12 @@ def generate_portfolio_report(
             mark_prices = MockDataProvider().get_futures_mark_prices()
 
     futures_summary = FuturesAnalyzer.analyze(raw_futures, mark_prices=mark_prices)
-    logger.info(
-        f"Futures Derivatives Analyzed: Margin Balance = ${futures_summary.total_margin_balance_usd:,.2f}, Margin Ratio = {futures_summary.margin_ratio_pct:.1f}% ({futures_summary.risk_status})."
-    )
+    if futures_summary.is_active and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
+        logger.info(
+            f"Futures Derivatives Analyzed: Margin Balance = ${futures_summary.total_margin_balance_usd:,.2f}, Margin Ratio = {futures_summary.margin_ratio_pct:.1f}% ({futures_summary.risk_status})."
+        )
+    else:
+        logger.info("Futures Derivatives: Not in use (No active futures positions or permissions).")
 
     # 3. Portfolio Quantitative Valuation
     summary = PortfolioAnalyzer.analyze(raw_balances, tickers)
@@ -376,6 +388,10 @@ def generate_portfolio_report(
     print(f" • Risk Assessment:         {risk.risk_level} (Score: {risk.overall_score}/10)")
     print(f" • Active Risk Flags:       {len(risk.flags)} identified")
     print(f" • Cash / Stable Reserve:   ${summary.stablecoin_value_usd:,.2f} ({summary.stablecoin_pct:.1f}%)")
+    if futures_summary and futures_summary.is_active and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
+        print(f" • Futures Derivatives:     ${futures_summary.total_margin_balance_usd:,.2f} Margin ({futures_summary.risk_status})")
+    else:
+        print(" • Futures Derivatives:     Not in use (Spot-only mode)")
     print(f"\n 💡 Executive Takeaway:\n   \"{ai_summary.headline}\"")
     print("-" * 64)
     print(" 📁 Generated Reports:")
