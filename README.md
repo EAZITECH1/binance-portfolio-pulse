@@ -56,8 +56,13 @@ In fast-paced Web3 media, timing and factual accuracy are everything. PortfolioP
 
 - 🌐 **Real-Time Market-Wide Intelligence:** Tracks top movers, volume leaders, and macro sentiment across a customizable watchlist (BTC, ETH, SOL, BNB, SUI, NEAR, AVAX, DOGE, PEPE), using 100% genuine live Binance spot exchange data.
 - 📊 **Verified Binance Market Indicators & Volume Tracking:** Ingests live 24h ticker metrics, tracked exchange volumes, top gainers, and market sentiment directly from Binance spot markets. Zero deceptive mock data.
+- 📈 **Real-Time Order Book & Liquidity Depth:** Live bid/ask spreads (USD and basis points), total liquidity, and order book imbalance ratios (buy wall vs. sell wall) for any Binance spot trading pair.
+- 💳 **Deposit & Withdrawal Transfer Tracking:** Real-time visibility into historical incoming deposits and outgoing withdrawals, transfer fees, network confirmations, and net wallet cash flows.
+- 📋 **Spot Trade Execution History on Any Pair:** Full fill history on any trading pair (price, quantity, USD value, commission fees paid in BNB/USDT, and buyer/seller side).
+- ⚡ **USDT-M Futures Derivatives Analysis:** Dedicated margin balance, unrealized PnL, effective leverage, and margin ratio analytics. Transparently reports spot-only mode when futures are not active.
+- 🔮 **Predictive Balance & Quantitative Stress Engine:** Empirical beta calculations and 30-day forward-looking stress simulations (Bull Market, Bear Market, Flash Crash, and Parametric VaR) powered by real historical klines.
 - 🐦 **Crypto-Media Tweet & Thread Drafter:** Generates publication-ready social posts in crisp crypto-journalism style. Supports single tweets and 3-part threads, strictly adhering to Twitter/X's 280-character ceiling.
-- 🔌 **Native Binance Agent OS MCP Integration:** Implements the Model Context Protocol over HTTP/SSE (`https://agent.binance.com/mcp/agentic`) and interactive stdio for AI client pairing.
+- 🔌 **Native Binance Agent OS MCP Integration:** Implements the Model Context Protocol over HTTP/SSE (`https://agent.binance.com/mcp/agentic`) and interactive stdio for AI client pairing (14 active tools).
 - 🛡️ **Quantitative Portfolio Risk Engine:** Automatically detects single-asset concentration (>35%), 24h volatility anomalies (>8%), sharp pullbacks, and depleted cash buffers.
 - 🎨 **Multi-Format Reporting:** Produces Markdown briefs, dark-mode HTML dashboards, machine-readable JSON payloads, and drafted tweets.
 - 🔐 **Transparent Security & Authentication:** Live market updates require zero keys. Private account portfolio tracking requires read-only Binance Spot API credentials.
@@ -72,6 +77,11 @@ When PortfolioPulse is registered as an MCP server in **Claude Code**, **Claude 
 | User Prompt | Agent Action & MCP Tool Called | Resulting Output |
 | :--- | :--- | :--- |
 | *"Give me a quick market update on what's moving today"* | `generate_market_brief()` | Standalone brief with macro trends, top gainers/losers, and market indicators. |
+| *"What is the order book spread and bid/ask depth for BTC?"* | `get_order_book(symbol="BTCUSDT")` | Top bids/asks, spread in USD and basis points (bps), total liquidity, and imbalance ratio. |
+| *"Show my recent deposit and withdrawal transfers"* | `get_deposit_history()` + `get_withdraw_history()` | Historical wallet transfers, deposit/withdrawal records, networks, fees, and net funding. |
+| *"What are my recent trades on SOLUSDT?"* | `get_my_trades(symbol="SOLUSDT")` | Trade executions, fill prices, quantities, commissions paid, and buy/sell volumes. |
+| *"Run a predictive balance projection and stress test on my portfolio"* | `get_predictive_balance()` | Portfolio beta, 30-day Monte Carlo projections, and Bull/Bear/Flash Crash stress scenarios. |
+| *"What is my futures margin balance and leverage?"* | `get_futures_account()` | Futures account margin, unrealized PnL, leverage, or guidance if spot-only mode. |
 | *"Draft a tweet about today's crypto market"* | `draft_tweet(topic="market", style="single")` | Ready-to-post Cointelegraph-style tweet under 280 characters with stats and hashtags. |
 | *"Create a 3-part thread breaking down today's altcoin action and market data"* | `draft_tweet(topic="market", style="thread")` | Numbered 3-tweet thread (`1/3`, `2/3`, `3/3`) with hook, data, and takeaway. |
 | *"Summarize my Binance portfolio and draft a tweet about it"* | `get_account_balances()` + `draft_tweet(topic="portfolio")` | Comprehensive valuation, risk flags, and an allocation update post. |
@@ -239,16 +249,19 @@ Add the following entry under `mcpServers` (replace `/ABSOLUTE/PATH/TO/binance-p
 Completely quit Claude Desktop (**Cmd + Q** on macOS or **File > Exit** on Windows) and relaunch the app.
 
 ### Step 4: Verify MCP tool discovery
-Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 8 exposed tools active and ready!
+Open any chat in Claude Desktop. Look for the 🔨 **hammer (tools) icon** near the input field. You should see `binance-portfoliopulse` listed with all 14 exposed tools active and ready!
 
 ### Step 5: Try these prompt examples in Claude Desktop
 Type any of these prompts directly into Claude:
 
 1. 💬 *"Use PortfolioPulse to give me a market update and draft a tweet about it."*
-2. 💬 *"What is my highest risk asset in PortfolioPulse?"*
-3. 💬 *"Analyze today's top gainers and market overview on Binance."*
-4. 💬 *"Create a 3-part Twitter thread breaking down today's altcoin action and Binance spot volume."*
-5. 💬 *"Why is ETH moving today, and what should I watch?"*
+2. 💬 *"What is the order book spread and bid/ask depth for BTC?"*
+3. 💬 *"Show my recent deposit and withdrawal transfers on Binance."*
+4. 💬 *"What are my recent spot trade executions on SOLUSDT?"*
+5. 💬 *"Run a predictive stress test and beta calculation on my portfolio."*
+6. 💬 *"What is my highest risk asset in PortfolioPulse?"*
+7. 💬 *"Analyze today's top gainers and market overview on Binance."*
+8. 💬 *"Why is ETH moving today, and what should I watch?"*
 
 ---
 
@@ -342,13 +355,16 @@ Run the test suite with Python's built-in `unittest` runner:
 python3 -m unittest discover -s tests -v
 ```
 
-**15 unit tests covering:**
-- Character count validation on single tweets (`<= 280` chars)
-- Thread sequence validation (`1/3`, `2/3`, `3/3`)
-- Watchlist market overview, top movers ranking, and volume aggregation
-- Live market cap discovery and ranking (including USDT and USDC)
-- Market brief synthesis independent of portfolio data
-- Portfolio valuation, asset allocation, and concentration risk thresholds
+**33 automated unit tests covering:**
+- Spot trade execution parsing, commissions, and buy/sell metrics (`test_transactions.py`)
+- Crypto & fiat deposit/withdrawal history and net funding (`test_transactions.py`)
+- Order book market depth, best bid/ask, spread in USD/bps, and imbalance ratios (`test_order_book.py`)
+- USDT-M Futures derivatives balances, margin ratios, and leverage (`test_futures.py`)
+- Predictive balance engine, portfolio beta, and 30-day stress tests (`test_predictive.py`)
+- Character count validation on single tweets (`<= 280` chars) and 3-part threads (`test_content.py`)
+- Watchlist market overview, top movers ranking, and volume aggregation (`test_price_feeds.py`)
+- Live market cap discovery and ranking (`test_price_feeds.py`)
+- Portfolio valuation, asset allocation, and concentration risk thresholds (`test_analytics.py`)
 
 ---
 
@@ -368,12 +384,16 @@ binance-portfolio-pulse/
 ├── src/
 │   ├── config.py             # Configuration loader with fallback
 │   ├── connectors/
-│   │   ├── mcp_client.py     # Binance Agent OS MCP client & stdio bridge
+│   │   ├── mcp_client.py     # Binance Agent OS MCP client & stdio bridge (14 tools)
 │   │   ├── binance_api.py    # Binance REST API connector with resilient SSL handling
 │   │   └── mock_provider.py  # Realistic multi-asset simulation engine
 │   ├── analytics/
 │   │   ├── market_brief.py   # Macro market intelligence generator
 │   │   ├── portfolio.py      # Valuation and allocation calculations
+│   │   ├── order_book.py     # Real-time order book depth & spread analytics
+│   │   ├── transactions.py   # Trade executions, deposits, withdrawals & cash flow
+│   │   ├── futures.py        # USDT-M Futures derivatives margin & leverage
+│   │   ├── predictive.py     # Beta calculations & 30-day quantitative stress tests
 │   │   ├── market_trends.py  # 24h momentum, 7d SMA, volatility
 │   │   ├── risk_analyzer.py  # Multi-factor risk engine (concentration, swings)
 │   │   └── ai_summary.py     # Plain-language beginner financial synthesizer
@@ -396,7 +416,11 @@ binance-portfolio-pulse/
 └── tests/
     ├── test_content.py       # Tweet length and market brief tests
     ├── test_price_feeds.py   # Market overview, watchlist, and MCP catalog tests
-    └── test_analytics.py     # Portfolio and risk engine tests
+    ├── test_analytics.py     # Portfolio and risk engine tests
+    ├── test_futures.py       # Futures margin balance & spot-only fallback tests
+    ├── test_predictive.py    # Quantitative stress tests and beta forecast tests
+    ├── test_order_book.py    # Bid/ask spread, depth, and order imbalance tests
+    └── test_transactions.py  # Trade execution, deposit, and withdrawal tests
 ```
 
 
