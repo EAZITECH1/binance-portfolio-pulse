@@ -625,15 +625,35 @@ class BinanceMCPClient:
                 try:
                     raw_f = self.api_client.get_futures_account()
                 except Exception as e:
-                    logger.warning(f"Live futures account fetch failed, using fallback: {e}")
-            if not raw_f:
+                    logger.info(f"Live futures account query: {e}. (Enable Futures on your Binance API key to view active margin).")
+                    raw_f = {
+                        "totalMarginBalance": "0.00",
+                        "totalWalletBalance": "0.00",
+                        "totalUnrealizedProfit": "0.00",
+                        "totalMaintMargin": "0.00",
+                        "totalInitialMargin": "0.00",
+                        "availableBalance": "0.00",
+                        "positions": [],
+                    }
+            elif config.mode == "mock":
                 raw_f = self.mock_provider.get_futures_account()
+            else:
+                raw_f = {
+                    "totalMarginBalance": "0.00",
+                    "totalWalletBalance": "0.00",
+                    "totalUnrealizedProfit": "0.00",
+                    "totalMaintMargin": "0.00",
+                    "totalInitialMargin": "0.00",
+                    "availableBalance": "0.00",
+                    "positions": [],
+                }
 
             mark_prices = []
             try:
                 mark_prices = self.api_client.get_futures_mark_prices()
             except Exception:
-                mark_prices = self.mock_provider.get_futures_mark_prices()
+                if config.mode == "mock":
+                    mark_prices = self.mock_provider.get_futures_mark_prices()
 
             f_summary = FuturesAnalyzer.analyze(raw_f, mark_prices=mark_prices)
             return f_summary.to_dict()
@@ -675,9 +695,27 @@ class BinanceMCPClient:
                 try:
                     raw_f = self.api_client.get_futures_account()
                 except Exception:
-                    pass
-            if not raw_f:
+                    raw_f = {
+                        "totalMarginBalance": "0.00",
+                        "totalWalletBalance": "0.00",
+                        "totalUnrealizedProfit": "0.00",
+                        "totalMaintMargin": "0.00",
+                        "totalInitialMargin": "0.00",
+                        "availableBalance": "0.00",
+                        "positions": [],
+                    }
+            elif config.mode == "mock":
                 raw_f = self.mock_provider.get_futures_account()
+            else:
+                raw_f = {
+                    "totalMarginBalance": "0.00",
+                    "totalWalletBalance": "0.00",
+                    "totalUnrealizedProfit": "0.00",
+                    "totalMaintMargin": "0.00",
+                    "totalInitialMargin": "0.00",
+                    "availableBalance": "0.00",
+                    "positions": [],
+                }
             f_summary = FuturesAnalyzer.analyze(raw_f)
 
             all_syms = list(set(["BTCUSDT"] + symbols))
