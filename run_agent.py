@@ -215,17 +215,39 @@ def generate_portfolio_report(
         try:
             raw_futures = api_client_for_futures.get_futures_account()
         except Exception as e:
-            logger.debug(f"Live futures account query fallback: {e}")
-    if not raw_futures:
+            logger.info(f"Live futures account query: {e}. (Enable Futures on your Binance API key to view active margin).")
+            # In live API mode, zero out futures rather than injecting fake mock balances
+            raw_futures = {
+                "totalMarginBalance": "0.00",
+                "totalWalletBalance": "0.00",
+                "totalUnrealizedProfit": "0.00",
+                "totalMaintMargin": "0.00",
+                "totalInitialMargin": "0.00",
+                "availableBalance": "0.00",
+                "positions": [],
+            }
+    elif mode == "mock":
         raw_futures = MockDataProvider().get_futures_account()
+    else:
+        raw_futures = {
+            "totalMarginBalance": "0.00",
+            "totalWalletBalance": "0.00",
+            "totalUnrealizedProfit": "0.00",
+            "totalMaintMargin": "0.00",
+            "totalInitialMargin": "0.00",
+            "availableBalance": "0.00",
+            "positions": [],
+        }
 
     try:
         if api_client_for_futures:
             mark_prices = api_client_for_futures.get_futures_mark_prices()
-        if not mark_prices:
+        elif mode == "mock":
             mark_prices = MockDataProvider().get_futures_mark_prices()
-    except Exception:
-        mark_prices = MockDataProvider().get_futures_mark_prices()
+    except Exception as e:
+        logger.debug(f"Futures mark prices query: {e}")
+        if mode == "mock":
+            mark_prices = MockDataProvider().get_futures_mark_prices()
 
     futures_summary = FuturesAnalyzer.analyze(raw_futures, mark_prices=mark_prices)
     logger.info(
@@ -239,15 +261,15 @@ def generate_portfolio_report(
     )
 
     # 4. Predictive Future Balance Engine (Real 30d Historical Klines & Beta Analysis)
-    held_symbols = [f"{p.asset}USDT" for p in summary.positions if not p.is_stablecoin]
+    held_symbols = [f"{p.asset}USDT" for p in summary.positions if not p.is_stablecoin and p.current_price > 0]
     all_syms = list(set(["BTCUSDT"] + held_symbols))
     klines_batch = {}
     if api_client_for_futures:
         try:
             klines_batch = api_client_for_futures.get_historical_klines_batch(all_syms, limit=30)
         except Exception as e:
-            logger.debug(f"Historical klines batch query fallback: {e}")
-    if not klines_batch:
+            logger.debug(f"Historical klines batch query: {e}")
+    elif mode == "mock":
         klines_batch = MockDataProvider().get_historical_klines_batch(all_syms, limit=30)
 
     predictive_report = PredictiveBalanceEngine.forecast(summary, futures_summary, klines_batch)

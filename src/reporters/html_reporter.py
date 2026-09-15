@@ -83,12 +83,29 @@ class HTMLReporter:
                 pos_pnl_class = "green" if pos.unrealized_pnl_usd >= 0 else "red"
                 pnl_cell = f'<span class="{pos_pnl_class}">${pos.unrealized_pnl_usd:+,.2f} ({pos.unrealized_pnl_pct:+.1f}%)</span>'
 
+            # Format price and USD value adaptively
+            if pos.current_price >= 1.0:
+                price_str = f"${pos.current_price:,.2f}"
+            elif pos.current_price > 0:
+                price_str = f"${pos.current_price:.6f}".rstrip("0").rstrip(".")
+            else:
+                price_str = "$0.00"
+
+            if pos.usd_value >= 0.01:
+                val_str = f"${pos.usd_value:,.2f}"
+            elif pos.usd_value > 0:
+                val_str = f"${pos.usd_value:.6f}".rstrip("0").rstrip(".")
+            else:
+                val_str = "$0.00"
+
+            amt_str = f"{pos.total_amount:,.4f}" if pos.total_amount >= 0.0001 else f"{pos.total_amount:.6f}".rstrip("0").rstrip(".")
+
             holdings_rows.append(
                 f'<tr>'
                 f'<td><strong class="asset-name">{pos.asset}</strong></td>'
-                f'<td>{pos.total_amount:,.4f}</td>'
-                f'<td>${pos.current_price:,.2f}</td>'
-                f'<td><strong>${pos.usd_value:,.2f}</strong></td>'
+                f'<td>{amt_str}</td>'
+                f'<td>{price_str}</td>'
+                f'<td><strong>{val_str}</strong></td>'
                 f'<td><span class="pill">{pos.allocation_pct:.1f}%</span></td>'
                 f'<td><span class="{chg_class}">{chg_text}</span></td>'
                 f'<td>{pnl_cell}</td>'

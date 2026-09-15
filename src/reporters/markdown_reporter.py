@@ -87,8 +87,25 @@ class MarkdownReporter:
                 pnl_icon = "📈" if p.unrealized_pnl_usd >= 0 else "📉"
                 pnl_str = f"{pnl_icon} ${p.unrealized_pnl_usd:+,.2f} ({p.unrealized_pnl_pct:+.1f}%)"
 
+            # Format price and USD value adaptively
+            if p.current_price >= 1.0:
+                price_str = f"${p.current_price:,.2f}"
+            elif p.current_price > 0:
+                price_str = f"${p.current_price:.6f}".rstrip("0").rstrip(".")
+            else:
+                price_str = "$0.00"
+
+            if p.usd_value >= 0.01:
+                val_str = f"${p.usd_value:,.2f}"
+            elif p.usd_value > 0:
+                val_str = f"${p.usd_value:.6f}".rstrip("0").rstrip(".")
+            else:
+                val_str = "$0.00"
+
+            amt_str = f"{p.total_amount:,.4f}" if p.total_amount >= 0.0001 else f"{p.total_amount:.6f}".rstrip("0").rstrip(".")
+
             lines.append(
-                f"| **{p.asset}** | {p.total_amount:,.4f} | ${p.current_price:,.2f} | ${p.usd_value:,.2f} | {p.allocation_pct:.1f}% | {chg_str} | {pnl_str} |"
+                f"| **{p.asset}** | {amt_str} | {price_str} | {val_str} | {p.allocation_pct:.1f}% | {chg_str} | {pnl_str} |"
             )
 
         if futures_summary and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):

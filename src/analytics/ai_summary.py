@@ -150,8 +150,8 @@ class AISummaryGenerator:
             if llm_summary:
                 return llm_summary
 
-        # Zero holdings check
-        if summary.total_value_usd <= 0 or summary.asset_count == 0:
+        # Zero holdings check (only trigger if truly no positions exist)
+        if summary.asset_count == 0:
             return PlainLanguageSummary(
                 headline="Your Binance Spot account currently has no active token holdings ($0.00).",
                 overview="As of today, your total account is valued at $0.00 USD across 0 active positions.",

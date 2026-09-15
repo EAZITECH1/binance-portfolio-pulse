@@ -28,8 +28,8 @@ class AssetPosition:
             "total_amount": round(self.total_amount, 6),
             "free_amount": round(self.free_amount, 6),
             "locked_amount": round(self.locked_amount, 6),
-            "current_price": round(self.current_price, 4),
-            "usd_value": round(self.usd_value, 2),
+            "current_price": round(self.current_price, 4) if self.current_price >= 1.0 else round(self.current_price, 8),
+            "usd_value": round(self.usd_value, 2) if self.usd_value >= 0.01 else round(self.usd_value, 8),
             "allocation_pct": round(self.allocation_pct, 2),
             "avg_buy_price": round(self.avg_buy_price, 4) if self.avg_buy_price else None,
             "unrealized_pnl_usd": (
@@ -39,7 +39,7 @@ class AssetPosition:
                 round(self.unrealized_pnl_pct, 2) if self.unrealized_pnl_pct is not None else None
             ),
             "change_24h_pct": round(self.change_24h_pct, 2),
-            "change_24h_usd": round(self.change_24h_usd, 2),
+            "change_24h_usd": round(self.change_24h_usd, 2) if abs(self.change_24h_usd) >= 0.01 else round(self.change_24h_usd, 8),
             "is_stablecoin": self.is_stablecoin,
         }
 
@@ -110,7 +110,7 @@ class PortfolioAnalyzer:
                 change_24h_pct = float(ticker_data.get("priceChangePercent", 0.0))
 
             usd_value = total_amount * curr_price
-            if usd_value < 1.0:  # Skip dust below $1
+            if usd_value <= 0.0 and total_amount <= 0.0:  # Skip zero-balance holdings
                 continue
 
             # Calculate 24h PnL USD
