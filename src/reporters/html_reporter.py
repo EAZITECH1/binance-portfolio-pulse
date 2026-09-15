@@ -4,12 +4,14 @@ Renders a sleek, responsive, dark-mode fintech report inspired by Binance Agent 
 Standalone and zero-dependency: requires no external CDNs or JavaScript frameworks.
 """
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from ..analytics.portfolio import PortfolioSummary
 from ..analytics.market_trends import MarketTrendHighlight
 from ..analytics.risk_analyzer import RiskAssessment
 from ..analytics.ai_summary import PlainLanguageSummary
+from ..analytics.futures import FuturesAccountSummary
+from ..analytics.predictive import PredictiveBalanceReport
 
 
 class HTMLReporter:
@@ -33,6 +35,8 @@ class HTMLReporter:
         trends: Dict[str, MarketTrendHighlight],
         ai_summary: PlainLanguageSummary,
         source_mode: str = "Binance Agent OS (MCP)",
+        futures_summary: Optional[FuturesAccountSummary] = None,
+        predictive_report: Optional[PredictiveBalanceReport] = None,
     ) -> str:
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         pnl_symbol = "+" if summary.total_24h_pnl_usd >= 0 else "-"
@@ -135,6 +139,105 @@ class HTMLReporter:
 
         unrealized_sign = "+" if summary.total_unrealized_pnl_usd >= 0 else "-"
         abs_unrealized_usd = abs(summary.total_unrealized_pnl_usd)
+
+        # Futures Derivatives Section HTML
+        futures_html = ""
+        if futures_summary and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
+            f_badge_class = "green" if futures_summary.risk_status == "SAFE" else ("amber" if futures_summary.risk_status == "MODERATE" else "red")
+            f_rows = []
+            for fp in futures_summary.positions:
+                fp_pnl_cls = "green" if fp.unrealized_pnl_usd >= 0 else "red"
+                fp_pnl_sgn = "+" if fp.unrealized_pnl_usd >= 0 else ""
+                cushion_cls = "green" if fp.liquidation_distance_pct > 20 else ("amber" if fp.liquidation_distance_pct > 10 else "red")
+                f_rows.append(
+                    f'<tr>'
+                    f'<td><strong>{fp.symbol}</strong></td>'
+                    f'<td><span class="badge {fp_pnl_cls}">{fp.side} {fp.leverage}x</span> <span class="muted" style="font-size:11px;">({fp.margin_type})</span></td>'
+                    f'<td>${fp.notional_usd:,.2f}</td>'
+                    f'<td>${fp.mark_price:,.2f}</td>'
+                    f'<td>${fp.liquidation_price:,.2f}</td>'
+                    f'<td><span class="badge {cushion_cls}">{fp.liquidation_distance_pct:.1f}%</span></td>'
+                    f'<td class="{fp_pnl_cls}">{fp_pnl_sgn}${fp.unrealized_pnl_usd:,.2f} ({fp_pnl_sgn}{fp.unrealized_pnl_pct:.1f}%)</td>'
+                    f'</tr>'
+                )
+            pos_table = (
+                f'<div style="overflow-x:auto;"><table><thead><tr><th>Contract</th><th>Side & Leverage</th><th>Notional Value</th><th>Mark Price</th><th>Liquidation Price</th><th>Cushion</th><th>Unrealized P&L</th></tr></thead><tbody>'
+                + "".join(f_rows)
+                + "</tbody></table></div>"
+            ) if f_rows else '<p class="muted">No active derivatives positions open.</p>'
+
+            futures_html = f'''
+        <div class="section-box" style="border-left: 4px solid var(--gold);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <h3 style="margin-bottom:0;">⚡ Binance Futures & Derivatives Intelligence</h3>
+                <div>
+                    <span class="badge {f_badge_class}">{futures_summary.risk_status}</span>
+                    <span class="pill" style="margin-left:8px;">Margin Ratio: <strong>{futures_summary.margin_ratio_pct:.1f}%</strong></span>
+                    <span class="pill" style="margin-left:4px;">Leverage: <strong>{futures_summary.effective_leverage:.1f}x</strong></span>
+                </div>
+            </div>
+            <div class="metrics-grid" style="margin-bottom:20px;">
+                <div class="metric-card" style="padding:16px;">
+                    <div class="metric-label">Total Margin Balance</div>
+                    <div class="metric-value" style="font-size:22px;">${futures_summary.total_margin_balance_usd:,.2f}</div>
+                    <div class="metric-sub muted">Available: ${futures_summary.available_balance_usd:,.2f}</div>
+                </div>
+                <div class="metric-card" style="padding:16px;">
+                    <div class="metric-label">Maintenance Margin</div>
+                    <div class="metric-value" style="font-size:22px;">${futures_summary.total_maint_margin_usd:,.2f}</div>
+                    <div class="metric-sub muted">Required collateral threshold</div>
+                </div>
+                <div class="metric-card" style="padding:16px;">
+                    <div class="metric-label">Unrealized Derivatives P&L</div>
+                    <div class="metric-value {'green' if futures_summary.total_unrealized_pnl_usd >= 0 else 'red'}" style="font-size:22px;">{'+' if futures_summary.total_unrealized_pnl_usd >= 0 else ''}${futures_summary.total_unrealized_pnl_usd:,.2f}</div>
+                    <div class="metric-sub muted">Active contracts</div>
+                </div>
+                <div class="metric-card" style="padding:16px;">
+                    <div class="metric-label">Net Directional Delta</div>
+                    <div class="metric-value" style="font-size:22px;">{'+' if futures_summary.net_delta_usd >= 0 else ''}${futures_summary.net_delta_usd:,.2f}</div>
+                    <div class="metric-sub muted">Net long/short exposure</div>
+                </div>
+            </div>
+            {pos_table}
+        </div>'''
+
+        # Predictive Scenario Section HTML
+        predictive_html = ""
+        if predictive_report and predictive_report.scenarios:
+            sc_cards = []
+            for sc in predictive_report.scenarios:
+                sc_cls = "green" if sc.net_pnl_usd >= 0 else ("red" if sc.btc_benchmark_change_pct < -10 else "amber")
+                sc_sgn = "+" if sc.net_pnl_usd >= 0 else ""
+                status_icon = "⚠️" if sc.liquidation_triggered else ("🚀" if sc.btc_benchmark_change_pct > 10 else "📊")
+                warn = sc.warning_notes[0] if sc.warning_notes else sc.description
+                sc_cards.append(
+                    f'<div class="metric-card" style="padding:16px; border-top: 3px solid var(--{sc_cls if sc_cls != "amber" else "gold"});">'
+                    f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">'
+                    f'<strong style="color:var(--text-primary); font-size:14px;">{status_icon} {sc.name}</strong>'
+                    f'<span class="badge {sc_cls}">{sc.btc_benchmark_change_pct:+.1f}%</span>'
+                    f'</div>'
+                    f'<div class="metric-value" style="font-size:24px; margin-bottom:4px;">${sc.projected_balance_usd:,.2f}</div>'
+                    f'<div class="metric-sub {sc_cls}" style="margin-bottom:8px;">{sc_sgn}${sc.net_pnl_usd:,.2f} ({sc_sgn}{sc.net_pnl_pct:.1f}%)</div>'
+                    f'<div style="font-size:12px; color:var(--text-secondary); line-height:1.4;">{warn}</div>'
+                    f'</div>'
+                )
+            sc_cards_html = "".join(sc_cards)
+            predictive_html = f'''
+        <div class="section-box" style="border-left: 4px solid var(--green);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <h3 style="margin-bottom:0;">🔮 Predictive Future Balance & Scenario Stress-Testing</h3>
+                <div>
+                    <span class="pill">7D Expected: <strong>${predictive_report.projected_7d_base_usd:,.2f}</strong></span>
+                    <span class="pill" style="margin-left:4px;">7D 95% VaR: <strong style="color:var(--red);">${predictive_report.var_95_7d_usd:,.2f} ({predictive_report.var_95_7d_pct:.1f}%)</strong></span>
+                </div>
+            </div>
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">
+                Forward-looking balance forecasts based on <strong>real 30-day Binance daily klines</strong>, empirical asset betas, and quantitative volatility modeling.
+            </p>
+            <div class="metrics-grid">
+                {sc_cards_html}
+            </div>
+        </div>'''
 
         html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -488,6 +591,10 @@ class HTMLReporter:
                 </table>
             </div>
         </div>
+
+        {futures_html}
+
+        {predictive_html}
 
         <!-- Market Highlights Table -->
         <div class="section-box">

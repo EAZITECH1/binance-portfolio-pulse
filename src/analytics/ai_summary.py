@@ -137,6 +137,8 @@ class AISummaryGenerator:
         llm_model: Optional[str] = None,
         gemini_api_key: Optional[str] = None,
         openai_api_key: Optional[str] = None,
+        futures_summary: Optional[Any] = None,
+        predictive_report: Optional[Any] = None,
     ) -> PlainLanguageSummary:
         """
         Synthesizes portfolio data into clear everyday language.
@@ -207,12 +209,28 @@ class AISummaryGenerator:
             else ""
         )
 
-        overview = (
-            f"As of today, your total account is valued at ${summary.total_value_usd:,.2f}. "
+        overview_parts = [
+            f"As of today, your spot portfolio is valued at ${summary.total_value_usd:,.2f}. "
             f"Over the past 24 hours, your net change was {pnl_sign}${abs_pnl_usd:,.2f} ({pnl_sign}{abs_pnl_pct:.1f}%). "
             f"{top_holding_str}You have ${summary.stablecoin_value_usd:,.2f} "
             f"({summary.stablecoin_pct:.1f}%) in liquid cash/stablecoins."
-        )
+        ]
+
+        if futures_summary and futures_summary.total_margin_balance_usd > 0:
+            futures_pos_count = len(futures_summary.positions)
+            overview_parts.append(
+                f" In addition, you have ${futures_summary.total_margin_balance_usd:,.2f} in Binance USDT-M Futures margin "
+                f"backing {futures_pos_count} active position{'s' if futures_pos_count != 1 else ''} "
+                f"(Margin Ratio: {futures_summary.margin_ratio_pct:.1f}%, Status: {futures_summary.risk_status})."
+            )
+
+        if predictive_report and predictive_report.projected_7d_base_usd > 0:
+            overview_parts.append(
+                f" Predictive modeling estimates a 7-day expected balance of ${predictive_report.projected_7d_base_usd:,.2f} "
+                f"with a statistical 7-day 95% Value-at-Risk of ${predictive_report.var_95_7d_usd:,.2f} ({predictive_report.var_95_7d_pct:.1f}%)."
+            )
+
+        overview = "".join(overview_parts)
 
         # 3. Market drivers breakdown
         drivers_parts = []
@@ -233,6 +251,14 @@ class AISummaryGenerator:
             drivers_parts.append(
                 f"• Bitcoin (BTC) moved {btc_pos.change_24h_pct:+.1f}% to ${btc_pos.current_price:,.2f}, "
                 f"providing a stabilizing anchor for your overall account."
+            )
+
+        if futures_summary and futures_summary.positions:
+            top_f = futures_summary.positions[0]
+            f_sign = "+" if top_f.unrealized_pnl_usd >= 0 else ""
+            drivers_parts.append(
+                f"• Derivatives: {top_f.symbol} {top_f.side} ({top_f.leverage}x) holds ${top_f.notional_usd:,.2f} notional "
+                f"with {f_sign}${top_f.unrealized_pnl_usd:,.2f} unrealized PnL (Liquidation Cushion: {top_f.liquidation_distance_pct:.1f}%)."
             )
 
         if not drivers_parts:

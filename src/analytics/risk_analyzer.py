@@ -3,16 +3,18 @@ Quantitative risk analysis engine for crypto portfolios.
 Detects concentration risk, excessive volatility, sharp drawdowns, and liquidity buffers.
 """
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from .portfolio import PortfolioSummary
 from .market_trends import MarketTrendHighlight
+from .futures import FuturesAccountSummary
+from .predictive import PredictiveBalanceReport
 
 
 @dataclass
 class RiskFlag:
     severity: str  # "LOW", "MEDIUM", "HIGH", "CRITICAL"
-    category: str  # "CONCENTRATION", "VOLATILITY", "DRAWDOWN", "LIQUIDITY", "DIVERSIFICATION"
+    category: str  # "CONCENTRATION", "VOLATILITY", "DRAWDOWN", "LIQUIDITY", "DIVERSIFICATION", "FUTURES", "VAR"
     title: str
     description: str
     action_item: str
@@ -54,6 +56,8 @@ class RiskAnalyzer:
         concentration_threshold: float = 0.35,
         volatility_threshold: float = 0.08,
         min_stablecoin_buffer: float = 0.10,
+        futures_summary: Optional[FuturesAccountSummary] = None,
+        predictive_report: Optional[PredictiveBalanceReport] = None,
     ) -> RiskAssessment:
         flags: List[RiskFlag] = []
         score_penalties = 0
@@ -194,6 +198,99 @@ class RiskAnalyzer:
                         f"Altcoins typically exhibit higher beta and wider drawdown cycles than BTC or ETH."
                     ),
                     action_item="Ensure you are comfortable with broader market volatility.",
+                )
+            )
+            score_penalties += 1
+
+        # 6. Futures Margin & Liquidation Proximity Checks
+        if futures_summary and futures_summary.positions:
+            # Margin ratio evaluation
+            if futures_summary.margin_ratio_pct >= 80.0:
+                flags.append(
+                    RiskFlag(
+                        severity="CRITICAL",
+                        category="FUTURES",
+                        title=f"Critical Futures Margin Ratio ({futures_summary.margin_ratio_pct:.1f}%)",
+                        description=(
+                            f"Your derivatives maintenance margin is at {futures_summary.margin_ratio_pct:.1f}% of total margin balance. "
+                            "You are at immediate risk of automated liquidation cascades."
+                        ),
+                        action_item="Deposit additional collateral or immediately reduce position sizes to protect margin balance.",
+                    )
+                )
+                score_penalties += 4
+            elif futures_summary.margin_ratio_pct >= 50.0:
+                flags.append(
+                    RiskFlag(
+                        severity="HIGH",
+                        category="FUTURES",
+                        title=f"High Futures Margin Usage ({futures_summary.margin_ratio_pct:.1f}%)",
+                        description=(
+                            f"Derivatives margin ratio is {futures_summary.margin_ratio_pct:.1f}%. "
+                            "Adverse market fluctuations may trigger margin calls."
+                        ),
+                        action_item="Monitor open derivative positions closely and maintain buffer collateral.",
+                    )
+                )
+                score_penalties += 2
+
+            # Liquidation proximity checks for individual positions
+            for fp in futures_summary.positions:
+                if fp.liquidation_distance_pct < 10.0:
+                    flags.append(
+                        RiskFlag(
+                            severity="CRITICAL",
+                            category="FUTURES",
+                            title=f"Imminent Liquidation Threat on {fp.symbol} {fp.side} ({fp.liquidation_distance_pct:.1f}% buffer)",
+                            description=(
+                                f"{fp.symbol} {fp.side} is only {fp.liquidation_distance_pct:.1f}% away from liquidation price (${fp.liquidation_price:,.2f})."
+                            ),
+                            action_item="Add margin, set a protective stop loss, or de-risk the position immediately.",
+                        )
+                    )
+                    score_penalties += 3
+                elif fp.liquidation_distance_pct < 20.0:
+                    flags.append(
+                        RiskFlag(
+                            severity="HIGH",
+                            category="FUTURES",
+                            title=f"Narrow Liquidation Cushion on {fp.symbol} {fp.side} ({fp.liquidation_distance_pct:.1f}%)",
+                            description=(
+                                f"{fp.symbol} {fp.side} has a {fp.liquidation_distance_pct:.1f}% buffer before reaching liquidation price (${fp.liquidation_price:,.2f})."
+                            ),
+                            action_item="Evaluate reducing leverage or setting tighter stop losses.",
+                        )
+                    )
+                    score_penalties += 1
+
+            # High effective leverage check
+            if futures_summary.effective_leverage >= 8.0:
+                flags.append(
+                    RiskFlag(
+                        severity="HIGH",
+                        category="FUTURES",
+                        title=f"High Effective Derivatives Leverage ({futures_summary.effective_leverage:.1f}x)",
+                        description=(
+                            f"Total notional futures exposure is {futures_summary.effective_leverage:.1f}x your margin balance. "
+                            "Small price movements will cause large percentage swings in equity."
+                        ),
+                        action_item="De-leverage open positions to lower drawdown velocity.",
+                    )
+                )
+                score_penalties += 2
+
+        # 7. Predictive Value-at-Risk (VaR) Check
+        if predictive_report and predictive_report.var_95_7d_pct >= 14.0:
+            flags.append(
+                RiskFlag(
+                    severity="HIGH",
+                    category="VAR",
+                    title=f"Elevated 7-Day Statistical VaR ({predictive_report.var_95_7d_pct:.1f}%)",
+                    description=(
+                        f"95% 7-Day Value-at-Risk projects potential downside of ${predictive_report.var_95_7d_usd:,.2f} "
+                        f"under standard market volatility patterns."
+                    ),
+                    action_item="Consider rebalancing high-beta assets into stablecoins to dampen portfolio variance.",
                 )
             )
             score_penalties += 1

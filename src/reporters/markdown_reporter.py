@@ -3,12 +3,14 @@ Markdown report generator for Binance PortfolioPulse AI.
 Produces clean, GitHub-flavored Markdown reports with tables, emojis, and risk badges.
 """
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from ..analytics.portfolio import PortfolioSummary
 from ..analytics.market_trends import MarketTrendHighlight
 from ..analytics.risk_analyzer import RiskAssessment
 from ..analytics.ai_summary import PlainLanguageSummary
+from ..analytics.futures import FuturesAccountSummary
+from ..analytics.predictive import PredictiveBalanceReport
 
 
 class MarkdownReporter:
@@ -22,6 +24,8 @@ class MarkdownReporter:
         trends: Dict[str, MarketTrendHighlight],
         ai_summary: PlainLanguageSummary,
         source_mode: str = "Binance Agent OS (MCP)",
+        futures_summary: Optional[FuturesAccountSummary] = None,
+        predictive_report: Optional[PredictiveBalanceReport] = None,
     ) -> str:
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         pnl_symbol = "+" if summary.total_24h_pnl_usd >= 0 else "-"
@@ -86,6 +90,69 @@ class MarkdownReporter:
             lines.append(
                 f"| **{p.asset}** | {p.total_amount:,.4f} | ${p.current_price:,.2f} | ${p.usd_value:,.2f} | {p.allocation_pct:.1f}% | {chg_str} | {pnl_str} |"
             )
+
+        if futures_summary and (futures_summary.total_margin_balance_usd > 0 or futures_summary.positions):
+            f_status_map = {
+                "SAFE": "🟢 SAFE",
+                "MODERATE": "🟡 MODERATE",
+                "WARNING": "🟠 WARNING",
+                "CRITICAL_LIQUIDATION_RISK": "🔴 CRITICAL LIQUIDATION RISK",
+            }
+            f_badge = f_status_map.get(futures_summary.risk_status, futures_summary.risk_status)
+            lines.extend([
+                "",
+                "---",
+                "",
+                "## ⚡ Binance Futures Derivatives & Margin Intelligence",
+                "",
+                f"**Margin Health Status:** {f_badge} | **Margin Ratio:** `{futures_summary.margin_ratio_pct:.1f}%` | **Effective Leverage:** `{futures_summary.effective_leverage:.1f}x`",
+                "",
+                "| Futures Metric | Value |",
+                "| :--- | :--- |",
+                f"| **Total Margin Balance** | **${futures_summary.total_margin_balance_usd:,.2f}** |",
+                f"| **Available Margin Cushion** | **${futures_summary.available_balance_usd:,.2f}** |",
+                f"| **Total Maintenance Margin** | **${futures_summary.total_maint_margin_usd:,.2f}** |",
+                f"| **Unrealized Derivatives P&L** | **${futures_summary.total_unrealized_pnl_usd:+,.2f}** |",
+                f"| **Net Directional Delta** | **${futures_summary.net_delta_usd:+,.2f}** |",
+                "",
+            ])
+            if futures_summary.positions:
+                lines.extend([
+                    "### Open Derivatives Positions",
+                    "",
+                    "| Contract | Side | Size | Mark Price | Liq. Price | Cushion | Unrealized P&L |",
+                    "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+                ])
+                for fp in futures_summary.positions:
+                    pnl_sign = "+" if fp.unrealized_pnl_usd >= 0 else ""
+                    pnl_icon = "📈" if fp.unrealized_pnl_usd >= 0 else "📉"
+                    cushion_icon = "🟢" if fp.liquidation_distance_pct > 20 else ("🟡" if fp.liquidation_distance_pct > 10 else "🔴")
+                    lines.append(
+                        f"| **{fp.symbol}** | `{fp.side} {fp.leverage}x` | {abs(fp.amount):.4f} (${fp.notional_usd:,.2f}) | ${fp.mark_price:,.2f} | ${fp.liquidation_price:,.2f} | {cushion_icon} {fp.liquidation_distance_pct:.1f}% | {pnl_icon} {pnl_sign}${fp.unrealized_pnl_usd:,.2f} ({pnl_sign}{fp.unrealized_pnl_pct:.1f}%) |"
+                    )
+                lines.append("")
+
+        if predictive_report and predictive_report.scenarios:
+            lines.extend([
+                "",
+                "---",
+                "",
+                "## 🔮 Predictive Balance & Scenario Stress-Testing",
+                f"**Current Balance:** `${predictive_report.current_total_balance_usd:,.2f}` | **7-Day Expected:** `${predictive_report.projected_7d_base_usd:,.2f}` | **7D 95% Value-at-Risk (VaR):** `${predictive_report.var_95_7d_usd:,.2f}` (`{predictive_report.var_95_7d_pct:.1f}%`)",
+                "",
+                "### Stress-Test Scenarios (Empirical Beta & Volatility)",
+                "",
+                "| Scenario | Benchmark Move | Projected Balance | Net Impact ($ / %) | Safety & Liquidation Notes |",
+                "| :--- | :--- | :--- | :--- | :--- |",
+            ])
+            for sc in predictive_report.scenarios:
+                sc_sign = "+" if sc.net_pnl_usd >= 0 else ""
+                sc_icon = "🚀" if sc.btc_benchmark_change_pct > 10 else ("🟢" if sc.net_pnl_usd >= 0 else ("🔴" if sc.btc_benchmark_change_pct < -20 else "↘️"))
+                status_note = sc.warning_notes[0] if sc.warning_notes else "Normal market fluctuations absorbed."
+                lines.append(
+                    f"| {sc_icon} **{sc.name}** | `{sc.btc_benchmark_change_pct:+.1f}%` | **${sc.projected_balance_usd:,.2f}** | {sc_sign}${sc.net_pnl_usd:,.2f} ({sc_sign}{sc.net_pnl_pct:.1f}%) | {status_note} |"
+                )
+            lines.append("")
 
         lines.extend([
             "",

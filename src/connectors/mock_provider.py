@@ -261,3 +261,79 @@ class MockDataProvider:
         for i, c in enumerate(res):
             c["rank"] = i + 1
         return res
+
+    def get_klines(self, symbol: str, interval: str = "1d", limit: int = 7) -> List[List[Any]]:
+        """Alias for get_klines_history."""
+        return self.get_klines_history(symbol=symbol, limit=limit)
+
+    def get_futures_account(self) -> Dict[str, Any]:
+        """Simulate realistic Binance USDT-M Futures account balances and open positions."""
+        return {
+            "totalMarginBalance": "5250.00",
+            "totalWalletBalance": "4950.00",
+            "totalUnrealizedProfit": "300.00",
+            "totalMaintMargin": "420.00",
+            "totalInitialMargin": "1250.00",
+            "availableBalance": "3700.00",
+            "positions": [
+                {
+                    "symbol": "BTCUSDT",
+                    "positionAmt": "0.150",
+                    "entryPrice": "61500.00",
+                    "markPrice": "63450.00",
+                    "unrealizedProfit": "292.50",
+                    "liquidationPrice": "52100.00",
+                    "leverage": "5",
+                    "marginType": "cross",
+                    "isolated": False,
+                    "initialMargin": "1903.50",
+                    "maintMargin": "285.50",
+                },
+                {
+                    "symbol": "ETHUSDT",
+                    "positionAmt": "-1.200",
+                    "entryPrice": "2750.00",
+                    "markPrice": "2720.00",
+                    "unrealizedProfit": "36.00",
+                    "liquidationPrice": "3450.00",
+                    "leverage": "3",
+                    "marginType": "cross",
+                    "isolated": False,
+                    "initialMargin": "1088.00",
+                    "maintMargin": "134.50",
+                },
+            ],
+            "assets": [
+                {
+                    "asset": "USDT",
+                    "walletBalance": "4950.00",
+                    "unrealizedProfit": "300.00",
+                    "marginBalance": "5250.00",
+                    "maintMargin": "420.00",
+                    "initialMargin": "1250.00",
+                    "availableBalance": "3700.00",
+                }
+            ],
+        }
+
+    def get_futures_mark_prices(self, symbols: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Simulate real-time mark prices and funding rates for futures."""
+        now_ms = int(time.time() * 1000)
+        rates = [
+            {"symbol": "BTCUSDT", "markPrice": "63450.00", "indexPrice": "63440.00", "lastFundingRate": "0.00010000", "nextFundingTime": now_ms + 14400000},
+            {"symbol": "ETHUSDT", "markPrice": "2720.00", "indexPrice": "2719.50", "lastFundingRate": "0.00008500", "nextFundingTime": now_ms + 14400000},
+            {"symbol": "SOLUSDT", "markPrice": "164.80", "indexPrice": "164.75", "lastFundingRate": "0.00012000", "nextFundingTime": now_ms + 14400000},
+        ]
+        if symbols:
+            target = {s.upper() for s in symbols}
+            return [r for r in rates if r["symbol"] in target]
+        return rates
+
+    def get_historical_klines_batch(
+        self, symbols: List[str], interval: str = "1d", limit: int = 30
+    ) -> Dict[str, List[List[Any]]]:
+        """Simulate 30-day historical klines for held assets."""
+        res = {}
+        for s in symbols:
+            res[s.upper()] = self.get_klines_history(s, limit=limit)
+        return res

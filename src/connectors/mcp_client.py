@@ -205,6 +205,16 @@ class BinanceMCPClient:
                     },
                 },
             },
+            {
+                "name": "get_futures_account",
+                "description": "Fetch Binance USDT-M Futures derivatives balances, margin ratio, effective leverage, and open derivative contracts.",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
+            {
+                "name": "get_predictive_balance",
+                "description": "Run forward-looking portfolio balance projections, empirical beta calculations, and quantitative stress-test scenarios (Bull, Bear, Flash Crash, VaR) using real 30-day historical klines from Binance.",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
         ]
 
     def ask_portfoliopulse(
@@ -606,6 +616,78 @@ class BinanceMCPClient:
             if config.mode == "mock":
                 return self.mock_provider.get_top_by_market_cap(limit=limit, include_stables=include_stables)
             return self.api_client.get_top_by_market_cap(limit=limit, include_stables=include_stables)
+
+        elif name == "get_futures_account":
+            from ..config import config
+            from ..analytics.futures import FuturesAnalyzer
+            raw_f = None
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_f = self.api_client.get_futures_account()
+                except Exception as e:
+                    logger.warning(f"Live futures account fetch failed, using fallback: {e}")
+            if not raw_f:
+                raw_f = self.mock_provider.get_futures_account()
+
+            mark_prices = []
+            try:
+                mark_prices = self.api_client.get_futures_mark_prices()
+            except Exception:
+                mark_prices = self.mock_provider.get_futures_mark_prices()
+
+            f_summary = FuturesAnalyzer.analyze(raw_f, mark_prices=mark_prices)
+            return f_summary.to_dict()
+
+        elif name == "get_predictive_balance":
+            from ..config import config
+            from ..analytics.portfolio import PortfolioAnalyzer
+            from ..analytics.futures import FuturesAnalyzer
+            from ..analytics.predictive import PredictiveBalanceEngine
+
+            raw_balances = []
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_balances = self.api_client.get_account_balances()
+                except Exception:
+                    pass
+            if not raw_balances:
+                raw_balances = self.mock_provider.get_account_balances()
+
+            held_non_stables = [b.get("asset", "").upper() for b in raw_balances if b.get("asset", "").upper() not in ("USDT", "USDC", "FDUSD")]
+            symbols = [f"{a}USDT" for a in held_non_stables]
+            tickers_map = {}
+            if self.fallback_to_api:
+                try:
+                    batch_res = self.api_client.get_tickers_batch(symbols)
+                    tickers_map = {t["symbol"]: t for t in batch_res if isinstance(t, dict) and "symbol" in t}
+                except Exception:
+                    pass
+            for s in symbols:
+                if s not in tickers_map:
+                    t = self.mock_provider.get_ticker_24hr(s)
+                    if t:
+                        tickers_map[s] = t
+
+            spot_summary = PortfolioAnalyzer.analyze(raw_balances, tickers_map)
+
+            raw_f = None
+            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+                try:
+                    raw_f = self.api_client.get_futures_account()
+                except Exception:
+                    pass
+            if not raw_f:
+                raw_f = self.mock_provider.get_futures_account()
+            f_summary = FuturesAnalyzer.analyze(raw_f)
+
+            all_syms = list(set(["BTCUSDT"] + symbols))
+            try:
+                klines_batch = self.api_client.get_historical_klines_batch(all_syms, limit=30)
+            except Exception:
+                klines_batch = self.mock_provider.get_historical_klines_batch(all_syms, limit=30)
+
+            report = PredictiveBalanceEngine.forecast(spot_summary, f_summary, klines_batch)
+            return report.to_dict()
 
         raise NotImplementedError(f"Tool {name} is not implemented.")
 

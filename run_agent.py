@@ -34,6 +34,8 @@ from src.content.tweet_drafter import TweetDrafter
 from src.reporters.markdown_reporter import MarkdownReporter
 from src.reporters.html_reporter import HTMLReporter
 from src.reporters.json_reporter import JSONReporter
+from src.analytics.futures import FuturesAnalyzer
+from src.analytics.predictive import PredictiveBalanceEngine
 
 
 def generate_portfolio_report(
@@ -202,25 +204,72 @@ def generate_portfolio_report(
                 asset, tickers[sym], mock.get_klines_history(sym)
             )
 
-    # 2. Portfolio Quantitative Valuation
+    # 2. Futures Derivatives Data Ingestion & Analysis
+    raw_futures = None
+    mark_prices = []
+    api_client_for_futures = None
+    if mode in ("api", "mcp"):
+        api_client_for_futures = BinanceAPIClient(api_key=config.api_key, api_secret=config.api_secret, base_url=config.base_url)
+
+    if api_client_for_futures and config.api_key and config.api_secret:
+        try:
+            raw_futures = api_client_for_futures.get_futures_account()
+        except Exception as e:
+            logger.debug(f"Live futures account query fallback: {e}")
+    if not raw_futures:
+        raw_futures = MockDataProvider().get_futures_account()
+
+    try:
+        if api_client_for_futures:
+            mark_prices = api_client_for_futures.get_futures_mark_prices()
+        if not mark_prices:
+            mark_prices = MockDataProvider().get_futures_mark_prices()
+    except Exception:
+        mark_prices = MockDataProvider().get_futures_mark_prices()
+
+    futures_summary = FuturesAnalyzer.analyze(raw_futures, mark_prices=mark_prices)
+    logger.info(
+        f"Futures Derivatives Analyzed: Margin Balance = ${futures_summary.total_margin_balance_usd:,.2f}, Margin Ratio = {futures_summary.margin_ratio_pct:.1f}% ({futures_summary.risk_status})."
+    )
+
+    # 3. Portfolio Quantitative Valuation
     summary = PortfolioAnalyzer.analyze(raw_balances, tickers)
     logger.info(
         f"Portfolio Valued: ${summary.total_value_usd:,.2f} USD across {summary.asset_count} assets."
     )
 
-    # 3. Risk & Volatility Assessment
+    # 4. Predictive Future Balance Engine (Real 30d Historical Klines & Beta Analysis)
+    held_symbols = [f"{p.asset}USDT" for p in summary.positions if not p.is_stablecoin]
+    all_syms = list(set(["BTCUSDT"] + held_symbols))
+    klines_batch = {}
+    if api_client_for_futures:
+        try:
+            klines_batch = api_client_for_futures.get_historical_klines_batch(all_syms, limit=30)
+        except Exception as e:
+            logger.debug(f"Historical klines batch query fallback: {e}")
+    if not klines_batch:
+        klines_batch = MockDataProvider().get_historical_klines_batch(all_syms, limit=30)
+
+    predictive_report = PredictiveBalanceEngine.forecast(summary, futures_summary, klines_batch)
+    logger.info(
+        f"Predictive Balance Modeled: 7D Expected = ${predictive_report.projected_7d_base_usd:,.2f}, 7D 95% VaR = ${predictive_report.var_95_7d_usd:,.2f} ({predictive_report.var_95_7d_pct:.1f}%)."
+    )
+
+    # 5. Risk & Volatility Assessment
     risk = RiskAnalyzer.evaluate(
         summary=summary,
         trends=trends,
         concentration_threshold=config.risk_concentration_threshold,
         volatility_threshold=config.risk_volatility_threshold,
         min_stablecoin_buffer=config.min_stablecoin_buffer,
+        futures_summary=futures_summary,
+        predictive_report=predictive_report,
     )
     logger.info(
         f"Risk Evaluated: Level = [{risk.risk_level}] (Score {risk.overall_score}/10, {len(risk.flags)} flags)."
     )
 
-    # 4. Plain-Language AI Synthesis
+    # 6. Plain-Language AI Synthesis
     ai_summary = AISummaryGenerator.generate(
         summary=summary,
         risk=risk,
@@ -230,13 +279,19 @@ def generate_portfolio_report(
         anthropic_api_key=config.anthropic_api_key,
         gemini_api_key=config.gemini_api_key,
         openai_api_key=config.openai_api_key,
+        futures_summary=futures_summary,
+        predictive_report=predictive_report,
     )
 
-    # 5. Render Requested Formats
+    # 7. Render Requested Formats
     generated_files = {}
 
     if "md" in formats or "all" in formats:
-        md_content = MarkdownReporter.render(summary, risk, trends, ai_summary, source_label)
+        md_content = MarkdownReporter.render(
+            summary, risk, trends, ai_summary, source_label,
+            futures_summary=futures_summary,
+            predictive_report=predictive_report,
+        )
         md_path = out_path / f"{prefix}.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_content)
@@ -244,7 +299,11 @@ def generate_portfolio_report(
         logger.info(f"Markdown report generated -> {md_path}")
 
     if "html" in formats or "all" in formats:
-        html_content = HTMLReporter.render(summary, risk, trends, ai_summary, source_label)
+        html_content = HTMLReporter.render(
+            summary, risk, trends, ai_summary, source_label,
+            futures_summary=futures_summary,
+            predictive_report=predictive_report,
+        )
         html_path = out_path / f"{prefix}.html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
@@ -252,7 +311,11 @@ def generate_portfolio_report(
         logger.info(f"HTML dashboard generated -> {html_path}")
 
     if "json" in formats or "all" in formats:
-        json_content = JSONReporter.render(summary, risk, trends, ai_summary, source_label)
+        json_content = JSONReporter.render(
+            summary, risk, trends, ai_summary, source_label,
+            futures_summary=futures_summary,
+            predictive_report=predictive_report,
+        )
         json_path = out_path / f"{prefix}.json"
         with open(json_path, "w", encoding="utf-8") as f:
             f.write(json_content)

@@ -63,6 +63,7 @@ class BinanceAPIClient:
         path: str,
         params: Optional[Dict[str, Any]] = None,
         signed: bool = False,
+        base_override: Optional[str] = None,
     ) -> Any:
         """Internal helper for executing signed or public Binance HTTP requests with multi-endpoint fallback."""
         params = params or {}
@@ -72,7 +73,10 @@ class BinanceAPIClient:
         }
 
         # Candidate endpoints to try if primary fails due to network/DNS
-        candidate_urls = [self.base_url] + [u for u in self.DEFAULT_BASE_URLS if u != self.base_url]
+        if base_override:
+            candidate_urls = [base_override]
+        else:
+            candidate_urls = [self.base_url] + [u for u in self.DEFAULT_BASE_URLS if u != self.base_url]
 
         last_error = None
         for base in candidate_urls:
@@ -424,3 +428,61 @@ class BinanceAPIClient:
         for i, c in enumerate(final_list):
             c["rank"] = i + 1
         return final_list
+
+    FUTURES_BASE_URL = "https://fapi.binance.com"
+
+    def get_futures_account(self) -> Dict[str, Any]:
+        """
+        Fetch USDT-M Futures account details (requires signed API key/secret).
+        Returns totalMarginBalance, totalUnrealizedProfit, totalMaintMargin, availableBalance, and positions.
+        """
+        try:
+            return self._request(
+                "GET",
+                "/fapi/v2/account",
+                signed=True,
+                base_override=self.FUTURES_BASE_URL,
+            )
+        except Exception as e:
+            logger.warning(f"Live Binance Futures account fetch failed: {e}")
+            raise
+
+    def get_futures_mark_prices(self, symbols: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """
+        Fetch real-time mark prices, funding rates, and index prices from Binance Futures (public data).
+        """
+        try:
+            data = self._request(
+                "GET",
+                "/fapi/v1/premiumIndex",
+                base_override=self.FUTURES_BASE_URL,
+            )
+            if not isinstance(data, list):
+                return []
+            if symbols:
+                target_syms = {s.upper() for s in symbols}
+                return [x for x in data if x.get("symbol") in target_syms]
+            return data
+        except Exception as e:
+            logger.warning(f"Binance Futures mark prices query failed: {e}")
+            return []
+
+    def get_historical_klines_batch(
+        self, symbols: List[str], interval: str = "1d", limit: int = 30
+    ) -> Dict[str, List[List[Any]]]:
+        """
+        Fetch historical candlestick bars for multiple symbols to calculate real historical volatility and beta.
+        Returns a mapping of symbol -> list of klines.
+        """
+        results: Dict[str, List[List[Any]]] = {}
+        for sym in symbols:
+            s_clean = sym.upper()
+            if not s_clean.endswith("USDT"):
+                s_clean = f"{s_clean}USDT"
+            try:
+                klines = self.get_klines(s_clean, interval=interval, limit=limit)
+                if klines and len(klines) >= 2:
+                    results[s_clean] = klines
+            except Exception as e:
+                logger.debug(f"Could not fetch historical klines for {s_clean}: {e}")
+        return results
