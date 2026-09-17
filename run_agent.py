@@ -623,13 +623,13 @@ def main():
         print("-" * 64)
         trades_list = tr_data.get("trades", [])
         if trades_list:
-            print(" Recent Executions:")
+            print(" Recent Filled Orders:")
             for t in trades_list[:10]:
                 side_color = "🟢 BUY " if t["side"] == "BUY" else "🔴 SELL"
                 maker_tag = "Maker" if t["is_maker"] else "Taker"
                 print(f"   [{t['datetime_utc']}] {side_color} {t['quantity']:>10.4f} @ ${t['price']:>10,.2f} (${t['quote_quantity']:>10,.2f}) | Fee: {t['commission']} {t['commission_asset']} ({maker_tag})")
         else:
-            print(f" No trade executions recorded on Binance for {sym}.")
+            print(f" No past filled orders recorded on Binance for {sym}.")
         print("=" * 64 + "\n")
         return
 

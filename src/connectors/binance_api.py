@@ -515,8 +515,8 @@ class BinanceAPIClient:
         from_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Fetch user's spot trade execution history on a specific trading pair (requires signed API key/secret).
-        Endpoint: GET /api/v3/myTrades
+        Fetch user's past filled spot order history on a specific trading pair (requires signed read-only API key/secret).
+        Endpoint: GET /api/v3/myTrades (Read-only, does not place or execute orders).
         """
         sym = symbol.upper()
         params: Dict[str, Any] = {"symbol": sym, "limit": min(limit, 1000)}

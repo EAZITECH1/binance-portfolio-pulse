@@ -1,5 +1,5 @@
 """
-Unit tests for Binance Trade Execution and Transfer (Deposit/Withdrawal) Analytics.
+Unit tests for Binance Past Trade Fill and Transfer (Deposit/Withdrawal) Analytics.
 """
 import unittest
 from src.analytics.transactions import TransactionHistoryAnalyzer

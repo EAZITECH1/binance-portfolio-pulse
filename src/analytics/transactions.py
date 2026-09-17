@@ -1,6 +1,7 @@
 """
-Binance Transaction, Trade Execution, and Transfer (Deposit/Withdrawal) Analytics.
-Processes spot trade history (myTrades) on any pair, deposit records, and withdrawal records.
+Binance Read-Only Transaction, Past Trade Fill, and Transfer (Deposit/Withdrawal) Analytics.
+Parses historical spot trade fills (myTrades) on any pair, deposit records, and withdrawal records.
+Strictly read-only; does not place or execute orders.
 """
 from dataclasses import dataclass, field
 from datetime import datetime, timezone

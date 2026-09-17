@@ -297,7 +297,7 @@ python3 run_agent.py --ask "What is the order book spread and depth for ETH?"
 
 # 2. Market Intelligence, Order Books & Social Content
 python3 run_agent.py --orderbook BTCUSDT                                     # Inspect live Binance order book & spread
-python3 run_agent.py --trades BTCUSDT                                        # Inspect trade execution fills on any pair
+python3 run_agent.py --trades BTCUSDT                                        # Inspect past filled orders & fees (read-only)
 python3 run_agent.py --transfers                                            # Inspect wallet deposits and withdrawals
 python3 run_agent.py --brief market                                         # Market brief
 python3 run_agent.py --brief market --draft-tweet --tweet-style single      # Single tweet (<=280 chars)
@@ -390,7 +390,7 @@ binance-portfolio-pulse/
 │   │   ├── market_brief.py   # Macro market intelligence generator
 │   │   ├── portfolio.py      # Valuation and allocation calculations
 │   │   ├── order_book.py     # Real-time order book depth & spread analytics
-│   │   ├── transactions.py   # Trade executions, deposits, withdrawals & cash flow
+│   │   ├── transactions.py   # Past trade fills, deposits, withdrawals & cash flow
 │   │   ├── futures.py        # USDT-M Futures derivatives margin & leverage
 │   │   ├── predictive.py     # Beta calculations & 30-day quantitative stress tests
 │   │   ├── market_trends.py  # 24h momentum, 7d SMA, volatility
@@ -419,17 +419,18 @@ binance-portfolio-pulse/
     ├── test_futures.py       # Futures margin balance & spot-only fallback tests
     ├── test_predictive.py    # Quantitative stress tests and beta forecast tests
     ├── test_order_book.py    # Bid/ask spread, depth, and order imbalance tests
-    └── test_transactions.py  # Trade execution, deposit, and withdrawal tests
+    └── test_transactions.py  # Past trade fills, deposit, and withdrawal tests
 ```
 
 
 ---
 
-## 🛡️ Security & Non-Custodial Safety
+## 🛡️ Security & Strict Read-Only Architecture
 
-- **Zero External Withdrawal Scope:** The Binance Agent OS MCP server architecture enforces strict sub-account boundaries and cannot execute withdrawals to external wallets.
+- **Strictly Read-Only (Zero Trade Execution):** PortfolioPulse is an analytical observer only. It does **NOT** place, modify, cancel, or execute orders on Binance. There are zero POST/PUT/DELETE order endpoints in the entire codebase.
+- **Zero Withdrawal Capabilities:** The agent has zero fund movement capabilities. Never grant "Enable Withdrawals" or "Enable Spot & Margin Trading" on your API key.
+- **Minimal API Permissions:** The agent requires only **"Enable Reading" / "Read Info"** permissions on Binance. All market intelligence and order book features work with zero keys.
 - **Credential Protection:** Secrets are never hardcoded and loaded strictly from local `.env` which is excluded via `.gitignore`.
-- **Read-Only Operation:** Even when using Direct REST mode, the agent functions entirely with read-only scopes.
 
 ---
 
