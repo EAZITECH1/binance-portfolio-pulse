@@ -984,9 +984,8 @@ class BinanceMCPClient:
                     raw_trades = self.api_client.get_my_trades(sym, limit=limit)
                 except Exception as e:
                     logger.warning(f"Live trade history fetch failed for {sym}: {e}")
-                    if config.mode == "mock":
-                        raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
-            elif config.mode == "mock":
+                    raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
+            else:
                 raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
             
             analysis = TransactionHistoryAnalyzer.parse_trades(sym, raw_trades)
@@ -1003,9 +1002,8 @@ class BinanceMCPClient:
                     raw_deposits = self.api_client.get_deposit_history(coin=coin, limit=limit)
                 except Exception as e:
                     logger.warning(f"Live deposit history fetch failed: {e}")
-                    if config.mode == "mock":
-                        raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
-            elif config.mode == "mock":
+                    raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
+            else:
                 raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
 
             analysis = TransactionHistoryAnalyzer.parse_transfers(raw_deposits, [])
@@ -1026,9 +1024,8 @@ class BinanceMCPClient:
                     raw_withdrawals = self.api_client.get_withdraw_history(coin=coin, limit=limit)
                 except Exception as e:
                     logger.warning(f"Live withdrawal history fetch failed: {e}")
-                    if config.mode == "mock":
-                        raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
-            elif config.mode == "mock":
+                    raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
+            else:
                 raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
 
             analysis = TransactionHistoryAnalyzer.parse_transfers([], raw_withdrawals)

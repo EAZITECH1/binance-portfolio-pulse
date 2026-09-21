@@ -86,11 +86,24 @@ class TestTransactionHistoryAnalyzer(unittest.TestCase):
         self.assertIn("withdrawals", wit_res)
 
     def test_ask_portfoliopulse_transfers_and_trades_intent(self):
-        ans_dep = self.mcp_client.ask_portfoliopulse("Show my deposit and withdrawal history")
+        # 1. Test hermetic mock / demo mode synthesis
+        ans_dep = self.mcp_client.ask_portfoliopulse("Show my deposit and withdrawal history", mode="mock")
         self.assertIn("Binance Transfers & Cash Flow History", ans_dep["answer"])
+        self.assertFalse(ans_dep.get("requires_credentials", False))
 
-        ans_tr = self.mcp_client.ask_portfoliopulse("Show my trade history for SOL")
+        ans_tr = self.mcp_client.ask_portfoliopulse("Show my trade history for SOL", mode="mock")
         self.assertIn("Binance Trade History: SOLUSDT", ans_tr["answer"])
+        self.assertFalse(ans_tr.get("requires_credentials", False))
+
+        # 2. Test unauthenticated API mode behavior (e.g. CI / fresh clone without keys)
+        if not (self.mcp_client.api_client.api_key and self.mcp_client.api_client.api_secret):
+            unauth_dep = self.mcp_client.ask_portfoliopulse("Show my deposit and withdrawal history", mode="api")
+            self.assertTrue(unauth_dep.get("requires_credentials"))
+            self.assertIn("API Keys Required", unauth_dep["answer"])
+
+            unauth_tr = self.mcp_client.ask_portfoliopulse("Show my trade history for SOL", mode="api")
+            self.assertTrue(unauth_tr.get("requires_credentials"))
+            self.assertIn("API Keys Required", unauth_tr["answer"])
 
 
 if __name__ == "__main__":
