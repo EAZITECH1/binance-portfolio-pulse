@@ -377,7 +377,20 @@ class BinanceMCPClient:
             from ..analytics.transactions import TransactionHistoryAnalyzer
             raw_deps = []
             raw_wits = []
-            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+            if active_mode == "mock":
+                raw_deps = self.mock_provider.get_deposit_history(limit=50)
+                raw_wits = self.mock_provider.get_withdraw_history(limit=50)
+            elif not (self.api_client.api_key and self.api_client.api_secret):
+                return {
+                    "query": prompt,
+                    "answer": (
+                        "🔐 **API Keys Required for Transfer History**\n\n"
+                        "To inspect your personal deposit and withdrawal records, please configure read-only `BINANCE_API_KEY` and `BINANCE_API_SECRET` in your `.env` file.\n\n"
+                        "Without API keys, PortfolioPulse cannot access your private Binance transfer history."
+                    ),
+                    "requires_credentials": True,
+                }
+            else:
                 try:
                     raw_deps = self.api_client.get_deposit_history(limit=50)
                 except Exception as e:
@@ -386,21 +399,6 @@ class BinanceMCPClient:
                     raw_wits = self.api_client.get_withdraw_history(limit=50)
                 except Exception as e:
                     logger.warning(f"Live withdrawal query failed: {e}")
-            elif active_mode == "mock":
-                raw_deps = self.mock_provider.get_deposit_history(limit=50)
-                raw_wits = self.mock_provider.get_withdraw_history(limit=50)
-
-            if not raw_deps and not raw_wits and active_mode != "mock":
-                # Check if API keys exist
-                if not (self.api_client.api_key and self.api_client.api_secret):
-                    return {
-                        "query": prompt,
-                        "answer": (
-                            "🔐 **API Keys Required for Transfer History**\n"
-                            "To inspect your deposits and withdrawals, please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in `.env`."
-                        ),
-                        "requires_credentials": True,
-                    }
 
             t_analysis = TransactionHistoryAnalyzer.parse_transfers(raw_deps, raw_wits)
             summary_txt = t_analysis.format_summary()
@@ -441,24 +439,23 @@ class BinanceMCPClient:
                     asset_cand = "BNBUSDT"
 
             raw_trades = []
-            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+            if active_mode == "mock":
+                raw_trades = self.mock_provider.get_my_trades(asset_cand, limit=50)
+            elif not (self.api_client.api_key and self.api_client.api_secret):
+                return {
+                    "query": prompt,
+                    "answer": (
+                        f"🔐 **API Keys Required for Trade History**\n\n"
+                        f"To inspect your past filled spot orders on {asset_cand}, please configure read-only `BINANCE_API_KEY` and `BINANCE_API_SECRET` in your `.env` file.\n\n"
+                        f"Without API keys, PortfolioPulse cannot access your private Binance trade executions."
+                    ),
+                    "requires_credentials": True,
+                }
+            else:
                 try:
                     raw_trades = self.api_client.get_my_trades(asset_cand, limit=50)
                 except Exception as e:
                     logger.warning(f"Live trade query failed for {asset_cand}: {e}")
-            elif active_mode == "mock":
-                raw_trades = self.mock_provider.get_my_trades(asset_cand, limit=50)
-
-            if not raw_trades and active_mode != "mock":
-                if not (self.api_client.api_key and self.api_client.api_secret):
-                    return {
-                        "query": prompt,
-                        "answer": (
-                            f"🔐 **API Keys Required for Trade History**\n"
-                            f"To inspect your past filled spot orders on {asset_cand}, please configure read-only BINANCE_API_KEY and BINANCE_API_SECRET in `.env`."
-                        ),
-                        "requires_credentials": True,
-                    }
 
             tr_analysis = TransactionHistoryAnalyzer.parse_trades(asset_cand, raw_trades)
             summary_txt = tr_analysis.format_summary()
@@ -978,15 +975,22 @@ class BinanceMCPClient:
             from ..analytics.transactions import TransactionHistoryAnalyzer
             sym = (arguments.get("symbol") or "BTCUSDT").upper()
             limit = int(arguments.get("limit", 50))
-            raw_trades = []
-            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+            if config.mode == "mock":
+                raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
+            elif not (self.api_client.api_key and self.api_client.api_secret):
+                return {
+                    "error": "BINANCE_API_KEY and BINANCE_API_SECRET are required in .env to pull trade execution history",
+                    "requires_credentials": True,
+                    "symbol": sym,
+                    "total_trades": 0,
+                    "trades": [],
+                }
+            else:
                 try:
                     raw_trades = self.api_client.get_my_trades(sym, limit=limit)
                 except Exception as e:
                     logger.warning(f"Live trade history fetch failed for {sym}: {e}")
-                    raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
-            else:
-                raw_trades = self.mock_provider.get_my_trades(sym, limit=limit)
+                    return {"error": str(e)}
             
             analysis = TransactionHistoryAnalyzer.parse_trades(sym, raw_trades)
             return analysis.to_dict()
@@ -996,15 +1000,21 @@ class BinanceMCPClient:
             from ..analytics.transactions import TransactionHistoryAnalyzer
             coin = arguments.get("coin")
             limit = int(arguments.get("limit", 50))
-            raw_deposits = []
-            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+            if config.mode == "mock":
+                raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
+            elif not (self.api_client.api_key and self.api_client.api_secret):
+                return {
+                    "error": "BINANCE_API_KEY and BINANCE_API_SECRET are required in .env to pull deposit history",
+                    "requires_credentials": True,
+                    "total_deposits": 0,
+                    "deposits": [],
+                }
+            else:
                 try:
                     raw_deposits = self.api_client.get_deposit_history(coin=coin, limit=limit)
                 except Exception as e:
                     logger.warning(f"Live deposit history fetch failed: {e}")
-                    raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
-            else:
-                raw_deposits = self.mock_provider.get_deposit_history(coin=coin, limit=limit)
+                    return {"error": str(e)}
 
             analysis = TransactionHistoryAnalyzer.parse_transfers(raw_deposits, [])
             return {
@@ -1018,15 +1028,21 @@ class BinanceMCPClient:
             from ..analytics.transactions import TransactionHistoryAnalyzer
             coin = arguments.get("coin")
             limit = int(arguments.get("limit", 50))
-            raw_withdrawals = []
-            if self.fallback_to_api and self.api_client.api_key and self.api_client.api_secret:
+            if config.mode == "mock":
+                raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
+            elif not (self.api_client.api_key and self.api_client.api_secret):
+                return {
+                    "error": "BINANCE_API_KEY and BINANCE_API_SECRET are required in .env to pull withdrawal history",
+                    "requires_credentials": True,
+                    "total_withdrawals": 0,
+                    "withdrawals": [],
+                }
+            else:
                 try:
                     raw_withdrawals = self.api_client.get_withdraw_history(coin=coin, limit=limit)
                 except Exception as e:
                     logger.warning(f"Live withdrawal history fetch failed: {e}")
-                    raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
-            else:
-                raw_withdrawals = self.mock_provider.get_withdraw_history(coin=coin, limit=limit)
+                    return {"error": str(e)}
 
             analysis = TransactionHistoryAnalyzer.parse_transfers([], raw_withdrawals)
             return {

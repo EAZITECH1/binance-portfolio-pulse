@@ -70,23 +70,61 @@ class TestTransactionHistoryAnalyzer(unittest.TestCase):
         self.assertIn("Binance Transfers & Cash Flow History", res.format_summary())
 
     def test_mcp_call_tool_get_my_trades(self):
-        res = self.mcp_client.call_tool("get_my_trades", {"symbol": "ETHUSDT", "limit": 10})
-        self.assertEqual(res["symbol"], "ETHUSDT")
-        self.assertIn("total_trades", res)
-        self.assertIn("total_volume_usd", res)
-        self.assertIn("trades", res)
+        from src.config import config
+        prev_mode = config.mode
+        try:
+            config.mode = "mock"
+            res = self.mcp_client.call_tool("get_my_trades", {"symbol": "ETHUSDT", "limit": 10})
+            self.assertEqual(res["symbol"], "ETHUSDT")
+            self.assertIn("total_trades", res)
+            self.assertIn("total_volume_usd", res)
+            self.assertIn("trades", res)
+        finally:
+            config.mode = prev_mode
 
     def test_mcp_call_tool_transfers(self):
-        dep_res = self.mcp_client.call_tool("get_deposit_history", {"limit": 10})
-        self.assertIn("total_deposits", dep_res)
-        self.assertIn("deposits", dep_res)
+        from src.config import config
+        prev_mode = config.mode
+        try:
+            config.mode = "mock"
+            dep_res = self.mcp_client.call_tool("get_deposit_history", {"limit": 10})
+            self.assertIn("total_deposits", dep_res)
+            self.assertIn("deposits", dep_res)
 
-        wit_res = self.mcp_client.call_tool("get_withdraw_history", {"limit": 10})
-        self.assertIn("total_withdrawals", wit_res)
-        self.assertIn("withdrawals", wit_res)
+            wit_res = self.mcp_client.call_tool("get_withdraw_history", {"limit": 10})
+            self.assertIn("total_withdrawals", wit_res)
+            self.assertIn("withdrawals", wit_res)
+        finally:
+            config.mode = prev_mode
+
+    def test_mcp_call_tool_requires_auth_when_no_keys(self):
+        from src.config import config
+        prev_mode = config.mode
+        prev_key = self.mcp_client.api_client.api_key
+        prev_secret = self.mcp_client.api_client.api_secret
+        try:
+            config.mode = "api"
+            self.mcp_client.api_client.api_key = None
+            self.mcp_client.api_client.api_secret = None
+
+            res_trades = self.mcp_client.call_tool("get_my_trades", {"symbol": "ETHUSDT"})
+            self.assertTrue(res_trades.get("requires_credentials"))
+            self.assertIn("required", res_trades.get("error", "").lower())
+
+            res_dep = self.mcp_client.call_tool("get_deposit_history", {})
+            self.assertTrue(res_dep.get("requires_credentials"))
+            self.assertIn("required", res_dep.get("error", "").lower())
+
+            res_wit = self.mcp_client.call_tool("get_withdraw_history", {})
+            self.assertTrue(res_wit.get("requires_credentials"))
+            self.assertIn("required", res_wit.get("error", "").lower())
+        finally:
+            config.mode = prev_mode
+            self.mcp_client.api_client.api_key = prev_key
+            self.mcp_client.api_client.api_secret = prev_secret
 
     def test_ask_portfoliopulse_transfers_and_trades_intent(self):
-        # 1. Test hermetic mock / demo mode synthesis
+        # 1. Test explicit mock / demo mode synthesis
         ans_dep = self.mcp_client.ask_portfoliopulse("Show my deposit and withdrawal history", mode="mock")
         self.assertIn("Binance Transfers & Cash Flow History", ans_dep["answer"])
         self.assertFalse(ans_dep.get("requires_credentials", False))
@@ -95,15 +133,25 @@ class TestTransactionHistoryAnalyzer(unittest.TestCase):
         self.assertIn("Binance Trade History: SOLUSDT", ans_tr["answer"])
         self.assertFalse(ans_tr.get("requires_credentials", False))
 
-        # 2. Test unauthenticated API mode behavior (e.g. CI / fresh clone without keys)
-        if not (self.mcp_client.api_client.api_key and self.mcp_client.api_client.api_secret):
+        # 2. Test unauthenticated API mode behavior (verifying it does not fallback to mock data)
+        prev_key = self.mcp_client.api_client.api_key
+        prev_secret = self.mcp_client.api_client.api_secret
+        try:
+            self.mcp_client.api_client.api_key = None
+            self.mcp_client.api_client.api_secret = None
+
             unauth_dep = self.mcp_client.ask_portfoliopulse("Show my deposit and withdrawal history", mode="api")
             self.assertTrue(unauth_dep.get("requires_credentials"))
             self.assertIn("API Keys Required", unauth_dep["answer"])
+            self.assertNotIn("Binance Transfers & Cash Flow History", unauth_dep["answer"])
 
             unauth_tr = self.mcp_client.ask_portfoliopulse("Show my trade history for SOL", mode="api")
             self.assertTrue(unauth_tr.get("requires_credentials"))
             self.assertIn("API Keys Required", unauth_tr["answer"])
+            self.assertNotIn("Binance Trade History", unauth_tr["answer"])
+        finally:
+            self.mcp_client.api_client.api_key = prev_key
+            self.mcp_client.api_client.api_secret = prev_secret
 
 
 if __name__ == "__main__":

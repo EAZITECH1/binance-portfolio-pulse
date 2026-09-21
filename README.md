@@ -6,7 +6,7 @@
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Protocol%202024--11--05-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-brightgreen)](https://python.org)
 [![CI Test Suite](https://github.com/EAZITECH1/binance-portfolio-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/EAZITECH1/binance-portfolio-pulse/actions/workflows/ci.yml)
-[![Tests: Passing](https://img.shields.io/badge/tests-33%2F33%20passing-success)](tests/)
+[![Tests: Passing](https://img.shields.io/badge/tests-34%2F34%20passing-success)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![X (Twitter) Video](https://img.shields.io/badge/X-Public%20Video%20Demo-black?logo=x&logoColor=white)](https://x.com/eazitechh/status/2097412347803435075)
 
